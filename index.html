@@ -434,7 +434,12 @@ function init3d(){
 async function checkMic(){
   if(!navigator.mediaDevices?.getUserMedia){$("voiceStatus").textContent="Микрофон: API недоступен";$("voiceStatus").className="err";return false}
   try{
-    const s=await navigator.mediaDevices.getUserMedia({audio:true});
+    const s=await navigator.mediaDevices.getUserMedia({
+    video:{
+        facingMode:{ideal:"environment"}
+    },
+    audio:false
+});
     s.getTracks().forEach(t=>t.stop());
     $("voiceStatus").textContent="Микрофон: ONLINE";$("voiceStatus").className="ok"; return true;
   }catch(e){
