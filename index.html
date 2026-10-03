@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>BORZ PC · VISION AI</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--c:#69eaff;--g:#57f39b;--bg:#02090d;--p:rgba(2,12,16,.78)}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#02090d;color:#c6f5ff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+button,input{font:inherit}button{cursor:pointer}
+#app{position:relative;width:100vw;height:100vh;overflow:hidden;background:#02090d}
+#video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#07151a}
+#cv{position:absolute;inset:0;width:100%;height:100%;z-index:4;pointer-events:auto;cursor:crosshair}
+.hud{position:absolute;inset:0;z-index:5}
+.top{position:absolute;left:15px;right:15px;top:13px;display:flex;justify-content:space-between;align-items:flex-start}
+.brand{font-weight:900;font-size:25px;letter-spacing:7px;color:var(--c);text-shadow:0 0 15px #24d8f2}
+.sub{font-size:8px;letter-spacing:2.5px;color:#bfefff;margin-top:2px}.topinfo{font-size:9px}
+.left{position:absolute;left:15px;top:82px;width:176px;display:grid;gap:6px}
+.card{border:1px solid rgba(105,234,255,.65);border-left:3px solid var(--c);border-radius:11px;padding:8px 10px;background:var(--p);backdrop-filter:blur(8px)}
+.label{font-size:7px;letter-spacing:1.8px;color:#789aa3}.value{font-size:12px;font-weight:800;margin-top:3px}.green{color:var(--g)}
+.devices{font-size:14px;letter-spacing:6px;margin-top:5px}
+#mapBox{position:absolute;right:10px;top:11px;width:205px;height:164px;border:1px solid rgba(105,234,255,.8);border-radius:14px;overflow:hidden;background:#08151a;box-shadow:0 0 18px rgba(40,220,245,.12)}
+#map{position:absolute;inset:0;filter:saturate(.75) brightness(.72)}
+.mapHead,.gps{position:absolute;z-index:1000;top:8px;font-size:8px;letter-spacing:1.6px;text-shadow:0 1px 3px #000}.mapHead{left:9px}.gps{right:8px}
+.mapRoute{position:absolute;z-index:1001;left:8px;right:8px;bottom:8px;display:flex;gap:5px}
+.mapRoute input{min-width:0;flex:1;border:1px solid rgba(105,234,255,.6);background:rgba(0,8,12,.9);border-radius:7px;padding:6px;color:white;font-size:7px}
+.smallBtn,.action{border:1px solid var(--c);background:rgba(2,25,31,.9);color:var(--c);border-radius:7px;font-size:7px;letter-spacing:.7px;padding:6px 8px}
+#objectPanel{position:absolute;left:15px;top:365px;width:176px;height:275px;border:1px solid rgba(105,234,255,.65);border-radius:12px;background:var(--p);backdrop-filter:blur(8px);padding:10px}
+.objTitle{font-size:7px;letter-spacing:1.7px;color:var(--c)}#objName{font-size:15px;color:var(--g);font-weight:900;margin-top:5px}
+#wire{display:none;width:154px;height:125px;margin:2px auto}
+#mini3d{width:100%;height:145px;margin:4px auto 6px;border:1px solid rgba(105,234,255,.28);border-radius:10px;background:rgba(0,10,14,.45);overflow:hidden}
+#mini3d canvas{display:block;width:100%!important;height:100%!important}
+.objHint{font-size:7px;color:#759da7;margin-top:4px;line-height:1.35}
+#objList{display:flex;flex-wrap:wrap;gap:4px;max-height:54px;overflow:auto;margin:5px 0 6px}
+.objChip{border:1px solid rgba(105,234,255,.35);background:rgba(0,20,25,.72);color:#bceeff;border-radius:6px;padding:4px 5px;font-size:7px;cursor:pointer}
+.objChip.selected{border-color:var(--g);color:var(--g);box-shadow:0 0 10px rgba(87,243,155,.15)}.dims{font-size:8px;line-height:1.55;color:#91b3bc}
+#controls{position:absolute;right:9px;top:365px;display:flex;flex-direction:column;gap:7px}
+.ctrl{width:53px;height:53px;border-radius:50%;border:1px solid rgba(105,234,255,.75);background:rgba(3,20,26,.82);color:var(--c);font-size:7px;letter-spacing:.7px;font-weight:800;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px}
+.ctrl .ic{font-size:17px;line-height:1}.ctrl.active{background:rgba(0,130,155,.23);box-shadow:0 0 18px rgba(75,230,255,.25)}
+#aiBox{position:absolute;left:15px;right:15px;bottom:58px;min-height:63px;border:1px solid rgba(105,234,255,.65);border-radius:13px;background:rgba(2,12,17,.84);backdrop-filter:blur(9px);padding:10px 53px 9px 12px}
+.aiTitle{font-size:8px;letter-spacing:2px;color:var(--c);font-weight:900}.aiText{font-size:11px;margin-top:6px}
+#mic{position:absolute;right:7px;top:7px;width:40px;height:40px;border-radius:50%;border:1px solid var(--c);background:#03242b;color:var(--c)}
+#stats{position:absolute;left:15px;right:15px;bottom:10px;display:flex;justify-content:space-between}.stat{font-size:7px;letter-spacing:1.5px;color:#7898a0}.stat b{display:block;color:var(--c);font-size:13px;letter-spacing:0;margin-top:3px}
+#scanLabel{position:absolute;left:50%;top:47%;transform:translate(-50%,-50%);border:1px solid rgba(87,243,155,.7);width:125px;height:205px;z-index:3;display:none}
+#scanLabel:before,#scanLabel:after{content:"";position:absolute;inset:-1px;border:2px solid transparent}
+#scanLabel:before{border-left-color:var(--g);border-top-color:var(--g);width:22px;height:22px}.corner{position:absolute;right:-2px;bottom:-2px;width:22px;height:22px;border-right:2px solid var(--g);border-bottom:2px solid var(--g)}
+#toast{position:absolute;z-index:30;left:50%;bottom:135px;transform:translateX(-50%);padding:8px 12px;border:1px solid var(--c);border-radius:9px;background:#021015;display:none;font-size:10px;white-space:nowrap}
+#model3d{position:absolute;z-index:25;left:50%;top:50%;transform:translate(-50%,-50%);width:min(430px,calc(100vw - 40px));height:min(430px,calc(100vh - 100px));border:1px solid var(--c);border-radius:15px;background:rgba(0,10,14,.93);display:none;box-shadow:0 0 36px rgba(105,234,255,.22)}
+.modelHint{position:absolute;left:12px;right:12px;bottom:10px;z-index:3;text-align:center;font-size:8px;color:#8fb8c1;background:rgba(0,8,12,.65);padding:5px;border-radius:7px}
+#model3d canvas{width:100%;height:100%}.modelTitle{position:absolute;left:10px;top:8px;z-index:2;font-size:9px;letter-spacing:1.5px;color:var(--c)}
+#close3d{position:absolute;right:8px;top:6px;z-index:3;border:0;background:none;color:var(--c);font-size:18px}
+#boot{position:absolute;z-index:50;left:50%;top:52%;transform:translate(-50%,-50%);width:190px;padding:15px;text-align:center;border:1px solid rgba(105,234,255,.7);border-radius:12px;background:rgba(2,12,16,.92);font-size:12px}
+.hidden{display:none!important}
+@media(min-width:500px){
+ .brand{font-size:30px}.left{width:230px}.card{padding:10px 12px}
+ #mapBox{width:300px;height:235px}.mapHead,.gps{font-size:10px}
+ #objectPanel{width:230px;height:345px;top:420px}#mini3d{height:170px}#wire{width:205px;height:165px}
+ #controls{top:405px;right:15px}.ctrl{width:64px;height:64px}
+ #aiBox{left:6%;right:6%;bottom:75px;min-height:72px}
+}
+
+/* ===== BORZ PC INTEGRATED ===== */
+#aiBox{padding-right:12px;display:flex;flex-direction:column;gap:7px}
+.aiRow{display:flex;gap:7px;align-items:center}.aiRow input{flex:1;min-width:0;background:rgba(0,8,12,.82);border:1px solid rgba(105,234,255,.45);border-radius:8px;color:#d9fbff;padding:7px 9px;font-size:10px;outline:none}.aiRow input:focus{border-color:var(--c);box-shadow:0 0 12px rgba(105,234,255,.12)}.aiRow button{border:1px solid var(--c);background:rgba(2,25,31,.92);color:var(--c);border-radius:8px;padding:7px 10px;font-size:9px;font-weight:800}.aiRow button:hover{background:rgba(20,90,105,.65)}
+#mic{position:static;flex:none;width:34px;height:34px;border-radius:50%;border:1px solid var(--c);background:#03242b;color:var(--c);font-size:14px}
+#modeBar{display:flex;gap:6px;flex-wrap:wrap}.modeBtn{border:1px solid rgba(105,234,255,.4);background:rgba(2,15,20,.78);color:#9fd9e3;border-radius:7px;padding:5px 7px;font-size:7px;letter-spacing:.8px}.modeBtn.active{color:var(--g);border-color:var(--g);box-shadow:0 0 10px rgba(87,243,155,.12)}
+#objList{max-height:54px;overflow:auto;margin-top:5px;font-size:8px;color:#9cc5cc;line-height:1.45}
+#routeInfo{position:absolute;left:8px;right:8px;bottom:43px;z-index:1002;font-size:7px;color:#c6f5ff;background:rgba(0,8,12,.78);border-radius:6px;padding:4px 6px;display:none}
+#statusDot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--g);box-shadow:0 0 8px var(--g);margin-right:4px}
+#aiLog{max-height:58px;overflow:auto;display:flex;flex-direction:column;gap:4px;font-size:8px;color:#b9e6ed}.msg{padding:4px 6px;border-radius:6px;background:rgba(5,25,31,.68)}.msg.user{border-left:2px solid #8db9c0}.msg.ai{border-left:2px solid var(--g)}
+@media(min-width:900px){
+ #app{background:#01070a}
+ #mapBox{width:340px;height:270px;right:20px;top:18px}
+ #objectPanel{width:250px;height:365px;left:20px;top:185px}
+ #wire{width:220px;height:180px}
+ #controls{right:20px;top:320px}
+ .ctrl{width:68px;height:68px}
+ .left{left:20px;top:88px;width:250px}
+ .card{padding:11px 13px}
+ #aiBox{left:290px;right:390px;bottom:80px;min-height:118px}
+ #stats{left:290px;right:390px;bottom:18px}
+ .brand{font-size:34px}.top{left:20px;right:20px;top:18px}
+}
+
+
+/* ===== BORZ V2 RELIABILITY PATCH ===== */
+#permissionPanel{position:absolute;z-index:60;left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,calc(100vw - 40px));padding:22px;border:1px solid rgba(105,234,255,.8);border-radius:18px;background:rgba(2,12,17,.95);backdrop-filter:blur(14px);box-shadow:0 0 40px rgba(40,220,245,.16)}
+#permissionPanel h2{margin:0 0 8px;color:var(--c);font-size:18px;letter-spacing:2px}#permissionPanel p{margin:8px 0;color:#bfefff;font-size:12px;line-height:1.45}
+.permRow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.permBtn{border:1px solid var(--c);background:#03242b;color:var(--c);border-radius:9px;padding:10px 12px;font-weight:800;font-size:10px}.permBtn.green{border-color:var(--g);color:var(--g)}
+#deviceList{max-height:92px;overflow:auto;margin-top:10px;font-size:10px;color:#a9d6de}.deviceChoice{display:flex;justify-content:space-between;gap:10px;padding:6px 8px;border-bottom:1px solid rgba(105,234,255,.12)}
+#cameraStatus,#voiceStatus{font-size:9px;color:#9ec8d0;margin-top:8px}.ok{color:var(--g)!important}.err{color:#ff8f8f!important}
+#scanMenu{position:absolute;z-index:25;right:100px;top:405px;display:flex;flex-direction:column;gap:6px}.scanExtra{display:none;border:1px solid var(--c);background:rgba(2,18,24,.94);color:var(--c);border-radius:9px;padding:8px 10px;font-size:8px;font-weight:800}.scanExtra.show{display:block}
+@media(max-width:899px){#scanMenu{right:75px;top:365px}}
+</style>
+</head>
+<body>
+<div id="app">
+<video id="video" autoplay playsinline muted></video><canvas id="cv"></canvas>
+<div class="hud">
+<div class="top"><div><div class="brand">BORZ</div><div class="sub">AI ASSISTANT · VISION</div></div><div class="topinfo">🔋 <b id="batTop">--%</b>　⌁ Wi‑Fi　●</div></div>
+
+<div class="left">
+<div class="card"><div class="label">АККУМУЛЯТОР</div><div class="value" id="bat">НЕДОСТУПНО</div></div>
+<div class="card"><div class="label">ГОЛОС</div><div class="value">РУССКИЙ · ГОТОВ</div></div>
+<div class="card"><div class="label">СОЕДИНЕНИЕ</div><div class="value green">ONLINE</div></div>
+<div class="card"><div class="label">УСТРОЙСТВА</div><div class="devices">▣　⌚　♧　▱</div></div>
+</div>
+
+<div id="mapBox"><div id="map"></div><div class="mapHead"><span id="statusDot"></span>BORZ НАВИГАЦИЯ</div><div class="gps" id="gps">GPS —</div><div id="routeInfo"></div><div class="mapRoute"><input id="dest" placeholder="Адрес / место"><button class="smallBtn" id="route">МАРШРУТ</button></div></div>
+
+<div id="scanLabel"><div class="corner"></div></div>
+
+<div id="objectPanel"><div class="objTitle">ВЫБРАННЫЙ ОБЪЕКТ · 3D</div><div id="objName">ПОИСК...</div><div id="conf">—</div><div id="mini3d"></div><canvas id="wire"></canvas><div class="dims" id="dims">РАЗМЕР: —<br>РАССТОЯНИЕ: —</div><div id="objList"></div><div class="objHint">Нажми на рамку объекта или его карточку — 3D-модель переключится.</div><button class="action" id="open3d">◇ ОТКРЫТЬ 3D</button></div>
+
+<div id="scanMenu">
+<button class="scanExtra" id="liveScanBtn">LIVE SCAN: ON</button>
+<button class="scanExtra" id="aiScanBtn">AI SCAN</button>
+</div>
+<div id="controls">
+<button class="ctrl" id="cameraBtn"><span class="ic">▣</span>КАМЕРА</button>
+<button class="ctrl" id="aiBtn"><span class="ic">♙</span>ИИ</button>
+<button class="ctrl" id="searchBtn"><span class="ic">⌕</span>ПОИСК</button>
+<button class="ctrl active" id="scanBtn"><span class="ic">◇</span>СКАН</button>
+<button class="ctrl" id="mapBtn"><span class="ic">⌖</span>КАРТА</button>
+</div>
+
+<div id="aiBox">
+<div class="aiTitle">▮▮ ИИ BORZ · <span id="aiModeLabel">OLLAMA / QWEN</span></div>
+<div class="aiText" id="aiText">BORZ активирован. Локальный ИИ готов.</div>
+<div id="aiLog"></div>
+<div id="modeBar"><button class="modeBtn active" id="localMode">ЛОКАЛЬНЫЙ QWEN</button><button class="modeBtn" id="browserMode">БРАУЗЕРНЫЙ ОТВЕТ</button></div>
+<div class="aiRow"><input id="aiInput" placeholder="Спросите BORZ…"><button id="sendAI">ОТПРАВИТЬ</button><button id="mic" title="Голосовой ввод">🎙</button></div>
+</div>
+<div id="stats"><div class="stat">СКОРОСТЬ<b>0 км/ч</b></div><div class="stat">ОБЪЕКТ<b id="statObj">NONE</b></div><div class="stat">ИИ BORZ<b style="color:var(--g)">ГОТОВ</b></div></div>
+</div>
+
+<div id="model3d"><div class="modelTitle" id="model3dTitle">BORZ · 3D МОДЕЛЬ</div><button id="close3d">×</button><div id="three"></div><div class="modelHint">Модель соответствует распознанному типу объекта. Это 3D-визуализация категории, а не точная реконструкция конкретного предмета.</div></div>
+<div id="toast"></div>
+<div id="permissionPanel">
+  <h2>BORZ · ДОСТУП К СЕНСОРАМ</h2>
+  <p>Для камеры нажми «КАМЕРА» и разреши доступ в браузере. Для голосового ассистента нажми «МИКРОФОН» и разреши микрофон.</p>
+  <div class="permRow">
+    <button class="permBtn" id="permCamera">▶ ЗАПУСТИТЬ КАМЕРУ</button>
+    <button class="permBtn" id="permMic">🎙 ПРОВЕРИТЬ МИКРОФОН</button>
+    <button class="permBtn green" id="permClose">ПРОДОЛЖИТЬ</button>
+  </div>
+  <div id="cameraStatus">Камера: ожидает проверки</div>
+  <div id="voiceStatus">Микрофон: ожидает проверки</div>
+  <div id="deviceList"></div>
+</div>
+<div id="boot">BORZ PC · VISION AI<br><small id="bootText">Инициализация…</small></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script type="module">window.__TRANSFORMERS_VERSION__="3.8.1";</script>
+
+<script>
+"use strict";
+(async function(){
+const $=id=>document.getElementById(id);
+const video=$("video"), cv=$("cv"), ctx=cv.getContext("2d");
+let stream=null, model=null, running=false, scanning=true, last=null, allObjects=[], map=null, marker=null, userPos=null, routeLayer=null, three=null;
+let expandedDetector=null, depthEstimator=null, browserGenerator=null, aiBackend="auto";
+let selectedIndex=0, mini3d=null, selectedClassRaw="", miniModelKey="", modalModelKey="";
+
+const modelNames={
+ person:"ЧЕЛОВЕК", face:"ЛИЦО", chair:"СТУЛ", couch:"ДИВАН", table:"СТОЛ", bed:"КРОВАТЬ", wardrobe:"ШКАФ", door:"ДВЕРЬ", window:"ОКНО", lamp:"ЛАМПА",
+ computer:"КОМПЬЮТЕР", laptop:"НОУТБУК", monitor:"МОНИТОР", keyboard:"КЛАВИАТУРА", mouse:"МЫШЬ", "cell phone":"ТЕЛЕФОН", phone:"ТЕЛЕФОН", headphones:"НАУШНИКИ", camera:"КАМЕРА", microphone:"МИКРОФОН", tv:"ТЕЛЕВИЗОР",
+ refrigerator:"ХОЛОДИЛЬНИК", oven:"ПЛИТА", microwave:"МИКРОВОЛНОВКА", cup:"ЧАШКА", bottle:"БУТЫЛКА", book:"КНИГА", car:"АВТОМОБИЛЬ", motorcycle:"МОТОЦИКЛ", bicycle:"ВЕЛОСИПЕД", bus:"АВТОБУС", truck:"ГРУЗОВИК",
+ tree:"ДЕРЕВО", plant:"РАСТЕНИЕ", dog:"СОБАКА", cat:"КОШКА", food:"ЕДА", tool:"ИНСТРУМЕНТ", key:"КЛЮЧ", wallet:"КОШЕЛЁК", clock:"ЧАСЫ", glasses:"ОЧКИ", remote:"ПУЛЬТ", charger:"ЗАРЯДКА", cable:"КАБЕЛЬ", box:"КОРОБКА", toy:"ИГРУШКА", backpack:"РЮКЗАК", bag:"СУМКА", shoes:"ОБУВЬ", clothing:"ОДЕЖДА", desk:"СТОЛ", "gaming pc":"ИГРОВОЙ ПК"
+};
+function modelKey(v){
+ const n=String(v||"").toLowerCase().trim();
+ const direct=Object.keys(modelNames).find(k=>k===n); if(direct)return direct;
+ if(n.includes("компьютер")||n.includes("пк"))return "computer";
+ if(n.includes("ноут"))return "laptop";
+ if(n.includes("телефон")||n.includes("смартф"))return "phone";
+ if(n.includes("бутыл"))return "bottle";
+ if(n.includes("чаш"))return "cup";
+ if(n.includes("человек")||n.includes("person"))return "person";
+ if(n.includes("стул"))return "chair";
+ if(n.includes("диван"))return "couch";
+ if(n.includes("стол"))return "table";
+ if(n.includes("машин")||n==="автомобиль"||n==="car")return "car";
+ if(n.includes("рюкзак"))return "backpack";
+ if(n.includes("собак"))return "dog";
+ if(n.includes("кошк"))return "cat";
+ if(n.includes("монитор"))return "monitor";
+ if(n.includes("клавиат"))return "keyboard";
+ if(n.includes("мыш"))return "mouse";
+ if(n.includes("телевиз")||n==="tv")return "tv";
+ if(n.includes("науш"))return "headphones";
+ if(n.includes("часы")||n==="clock")return "clock";
+ return n;
+}
+
+function matSolid(){return new THREE.MeshStandardMaterial({color:0x19d9ff,emissive:0x063942,roughness:.48,metalness:.22,transparent:true,opacity:.78})}
+function matAccent(){return new THREE.MeshStandardMaterial({color:0x57f39b,emissive:0x082f20,roughness:.5,metalness:.15,transparent:true,opacity:.85})}
+function addBox(g,s,position,rotation=[0,0,0],accent=false){const m=new THREE.Mesh(new THREE.BoxGeometry(...s),accent?matAccent():matSolid());m.position.set(...position);m.rotation.set(...rotation);g.add(m);return m}
+function addSphere(g,r,position,scale=[1,1,1],accent=false){const m=new THREE.Mesh(new THREE.SphereGeometry(r,24,16),accent?matAccent():matSolid());m.position.set(...position);m.scale.set(...scale);g.add(m);return m}
+function addCyl(g,r,h,position,rotation=[0,0,0],accent=false){const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,20),accent?matAccent():matSolid());m.position.set(...position);m.rotation.set(...rotation);g.add(m);return m}
+function addTubeBetween(g,a,b,r=.045,accent=false){const av=new THREE.Vector3(...a),bv=new THREE.Vector3(...b),dir=new THREE.Vector3().subVectors(bv,av),len=dir.length();const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,len,12),accent?matAccent():matSolid());m.position.copy(av.clone().add(bv).multiplyScalar(.5));m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir.normalize());g.add(m);return m}
+function addTorus(g,R,r,position,rotation=[Math.PI/2,0,0],accent=false){const m=new THREE.Mesh(new THREE.TorusGeometry(R,r,12,28),accent?matAccent():matSolid());m.position.set(...position);m.rotation.set(...rotation);g.add(m);return m}
+
+function buildModelGroup(raw){
+ const key=modelKey(raw),g=new THREE.Group();
+ switch(key){
+  case "person":
+   addSphere(g,.30,[0,1.75,0],[1,1.02,1],true); addCyl(g,.43,.78,[0,1.12,0],[],false); addBox(g,[.62,.22,.40],[0,.60,0],[],true);
+   addTubeBetween(g,[-.34,1.25,0],[ -.72,.78,0],.09); addTubeBetween(g,[.34,1.25,0],[ .72,.78,0],.09);
+   addTubeBetween(g,[-.18,.55,0],[-.30,-.35,0],.11); addTubeBetween(g,[.18,.55,0],[.30,-.35,0],.11); break;
+  case "laptop": case "computer": case "monitor": case "tv":
+   if(key==="laptop"){addBox(g,[1.65,.10,1.05],[0,.15,0]);addBox(g,[1.58,1.0,.08],[0,.67,-.47],[Math.PI*.07,0,0],true);addBox(g,[1.30,.03,.72],[0,.22,0],[0,0,0],false)}
+   else if(key==="monitor"||key==="tv"){addBox(g,[1.7,.12,1.05],[0,1.0,0],[],true);addBox(g,[.18,.55,.18],[0,.55,0]);addBox(g,[.85,.06,.55],[0,.28,0])}
+   else {addBox(g,[1.65,.75,1.25],[0,.65,0]);addBox(g,[1.35,.92,.12],[0,1.45,0],[],true);addBox(g,[1.42,.10,.95],[0,.18,0]);}
+   break;
+  case "bottle":
+   addCyl(g,.34,1.25,[0,.72,0]);addCyl(g,.22,.30,[0,1.48,0],[],true);addCyl(g,.19,.11,[0,1.68,0]);break;
+  case "cup": addCyl(g,.38,.68,[0,.42,0],[],false);addTorus(g,.25,.07,[.38,.48,0],[Math.PI/2,0,0],true); break;
+  case "chair": addBox(g,[1.2,.16,1.0],[0,.72,0],[],true);addBox(g,[1.12,1.25,.14],[0,1.35,-.43]);for(const x of [-.48,.48])for(const z of [-.38,.38])addBox(g,[.12,.78,.12],[x,.25,z]);break;
+  case "table": addBox(g,[1.9,.16,1.15],[0,1.05,0],[],true);for(const x of [-.75,.75])for(const z of [-.40,.40])addBox(g,[.13,1.0,.13],[x,.50,z]);break;
+  case "couch": addBox(g,[2.0,.42,.95],[0,.55,0],[],true);addBox(g,[2.0,1.15,.22],[0,1.25,-.37]);for(const x of [-.95,.95])addBox(g,[.24,.72,.95],[x,.85,0]);break;
+  case "bed": addBox(g,[2.0,.18,1.25],[0,.45,0],[],true);addBox(g,[1.95,.65,.14],[0,.80,-.55]);addBox(g,[.55,.20,.90],[-.55,.62,.10],[],true);break;
+  case "backpack": case "bag": addBox(g,[1.0,1.25,.5],[0,.85,0],[],true);addTorus(g,.5,.045,[0,1.3,-.05],[Math.PI/2,0,0]);break;
+  case "phone": addBox(g,[.72,.10,1.45],[0,.55,0],[],true);addBox(g,[.46,.02,.82],[0,.62,.01]);addSphere(g,.055,[.22,.82,.05]);break;
+  case "keyboard": addBox(g,[1.7,.10,.62],[0,.18,0],[],true);for(let r=0;r<4;r++)for(let c=0;c<9;c++)addBox(g,[.12,.025,.07],[-.68+c*.17,.25,-.20+r*.13]);break;
+  case "mouse": addSphere(g,.32,[0,.30,0],[1.0,.72,1.25],true);addBox(g,[.035,.025,.20],[0,.54,.02]);break;
+  case "headphones": addTorus(g,.62,.075,[0,.85,0],[Math.PI/2,0,0],true);addBox(g,[.18,.36,.18],[-.62,.45,0]);addBox(g,[.18,.36,.18],[.62,.45,0]);break;
+  case "clock": addTorus(g,.58,.08,[0,.75,0],[Math.PI/2,0,0],true);addBox(g,[.04,.04,.42],[0,.77,0]);addBox(g,[.04,.04,.30],[.10,.90,0],[0,0,-.9]);break;
+  case "car": addBox(g,[2.5,.45,1.2],[0,.45,0],[],true);addBox(g,[1.35,.62,.95],[0,.91,-.02]);for(const x of [-.9,.9])for(const z of [-.58,.58]){const w=addCyl(g,.26,.14,[x,.28,z],[Math.PI/2,0,0]);}break;
+  case "motorcycle": addTorus(g,.43,.065,[-.62,.42,0],[Math.PI/2,0,0],true);addTorus(g,.43,.065,[.62,.42,0],[Math.PI/2,0,0],true);addTubeBetween(g,[-.62,.42,0],[.10,.72,0],.055);addTubeBetween(g,[.10,.72,0],[.62,.42,0],.055);addBox(g,[.35,.24,.45],[0,.70,0]);break;
+  case "bicycle": addTorus(g,.47,.055,[-.60,.48,0],[Math.PI/2,0,0],true);addTorus(g,.47,.055,[.60,.48,0],[Math.PI/2,0,0],true);addTubeBetween(g,[-.60,.48,0],[0,.78,0],.04);addTubeBetween(g,[0,.78,0],[.60,.48,0],.04);addTubeBetween(g,[-.60,.48,0],[.60,.48,0],.04);break;
+  case "dog": case "cat": addSphere(g,.45,[0,.82,0],[1.5,.9,.75],true);addSphere(g,.32,[.62,1.02,0],[1.0,1.0,.9]);for(const x of [-.42,.42])for(const z of [-.25,.25])addCyl(g,.09,.55,[x,.30,z]);if(key==="dog")addTubeBetween(g,[-.72,.82,0],[-1.05,1.08,0],.06);break;
+  case "book": addBox(g,[1.4,.16,1.0],[0,.22,0],[],true);addBox(g,[.62,.03,.94],[-.37,.33,0]);addBox(g,[.62,.03,.94],[.37,.33,0]);break;
+  case "refrigerator": addBox(g,[1.2,2.25,.95],[0,1.1,0],[],true);addBox(g,[1.05,.02,.40],[.18,1.65,-.49]);break;
+  case "lamp": addCyl(g,.45,.10,[0,.10,0],[],true);addCyl(g,.08,1.35,[0,.75,0]);addCyl(g,.34,.30,[0,1.55,0]);break;
+  case "tree": addCyl(g,.16,.95,[0,.48,0]);addSphere(g,.75,[0,1.35,0],[1.0,1.2,1.0],true);break;
+  default: addBox(g,[1.25,1.25,1.25],[0,.72,0],[],true);addBox(g,[.82,.82,.82],[0,.72,0],[],false);break;
+ }
+ g.userData.key=key;g.userData.label=modelNames[key]||String(raw||"ОБЪЕКТ").toUpperCase();
+ g.position.y=-.35; return g;
+}
+function applyModel(sceneObj,raw){
+ if(!sceneObj)return; const key=modelKey(raw); if(sceneObj.userData.modelGroup && sceneObj.userData.modelKey===key)return; if(sceneObj.userData.modelGroup)sceneObj.scene.remove(sceneObj.userData.modelGroup);const g=buildModelGroup(raw);sceneObj.scene.add(g);sceneObj.userData.modelGroup=g;sceneObj.userData.modelKey=key;sceneObj.userData.label=g.userData.label;sceneObj.title = g.userData.label;
+}
+function initMini3D(){
+ const box=$("mini3d"); if(mini3d)return; const sc=new THREE.Scene();const cam=new THREE.PerspectiveCamera(38,1,.1,50);cam.position.set(2.4,1.8,3.4);
+ const ren=new THREE.WebGLRenderer({alpha:true,antialias:true});ren.setPixelRatio(Math.min(devicePixelRatio,2));ren.setSize(box.clientWidth||200,box.clientHeight||150);box.innerHTML="";box.appendChild(ren.domElement);sc.add(new THREE.AmbientLight(0xffffff,1.5));const key=new THREE.DirectionalLight(0xffffff,2.0);key.position.set(2,4,3);sc.add(key);sc.add(new THREE.GridHelper(4,12,0x55eaff,0x15383e));
+ mini3d={scene:sc,camera:cam,renderer:ren,modelGroup:null,userData:{}};cam.lookAt(0,.8,0);
+ function a(){requestAnimationFrame(a);if(mini3d.modelGroup)mini3d.modelGroup.rotation.y+=.012;ren.render(sc,cam)}a();
+}
+function show3DForObject(raw,open=false){
+ initMini3D();applyModel(mini3d,raw);
+ const k=modelKey(raw),name=mini3d.userData.label||modelNames[k]||String(raw).toUpperCase();
+ $("model3dTitle").textContent="BORZ · 3D МОДЕЛЬ · "+name;
+ if(open){$("model3d").style.display="block";init3d();applyModel(three,raw);$("model3dTitle").textContent="BORZ · 3D МОДЕЛЬ · "+(three.userData.label||name)}
+}
+
+const labels={person:"ЧЕЛОВЕК",chair:"СТУЛ",couch:"ДИВАН",table:"СТОЛ",laptop:"НОУТБУК","cell phone":"ТЕЛЕФОН",bottle:"БУТЫЛКА",cup:"ЧАШКА",car:"АВТОМОБИЛЬ",backpack:"РЮКЗАК",tv:"ТЕЛЕВИЗОР",keyboard:"КЛАВИАТУРА",mouse:"МЫШЬ",book:"КНИГА",dog:"СОБАКА",cat:"КОШКА",truck:"ГРУЗОВИК",bus:"АВТОБУС",motorcycle:"МОТОЦИКЛ",bicycle:"ВЕЛОСИПЕД",banana:"БАНАН",apple:"ЯБЛОКО",scissors:"НОЖНИЦЫ",clock:"ЧАСЫ",remote:"ПУЛЬТ",microwave:"МИКРОВОЛНОВКА",refrigerator:"ХОЛОДИЛЬНИК"};
+const candidateLabels=["человек","лицо","одежда","обувь","рюкзак","сумка","стол","стул","диван","кровать","шкаф","дверь","окно","лампа","компьютер","ноутбук","монитор","клавиатура","мышь","телефон","наушники","камера","микрофон","телевизор","холодильник","плита","чашка","бутылка","книга","машина","мотоцикл","велосипед","автобус","грузовик","дерево","растение","собака","кошка","еда","инструмент","ключ","кошелек","часы","очки","пульт","зарядка","кабель","коробка","игрушка"];
+
+function toast(t){const e=$("toast");e.textContent=t;e.style.display="block";clearTimeout(window.__toast);window.__toast=setTimeout(()=>e.style.display="none",2500)}
+let ruVoice=null;
+function chooseRuVoice(){try{const vs=window.speechSynthesis?.getVoices?.()||[];ruVoice=vs.find(v=>/^ru(-|_|$)/i.test(v.lang))||vs.find(v=>/russian|рус/i.test(v.name))||null}catch{}}
+if(window.speechSynthesis){chooseRuVoice();window.speechSynthesis.onvoiceschanged=chooseRuVoice}
+function speak(t){
+ if(!window.speechSynthesis){toast("Озвучивание не поддерживается браузером");return false}
+ chooseRuVoice();window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="ru-RU";if(ruVoice)u.voice=ruVoice;u.rate=.96;u.pitch=1;window.speechSynthesis.speak(u);return true
+}
+function addLog(role,text){const log=$("aiLog");const d=document.createElement("div");d.className="msg "+role;d.textContent=(role==="user"?"Вы: ":"BORZ: ")+text;log.appendChild(d);while(log.children.length>6)log.removeChild(log.firstChild);log.scrollTop=log.scrollHeight}
+function resize(){cv.width=innerWidth*devicePixelRatio;cv.height=innerHeight*devicePixelRatio;cv.style.width=innerWidth+"px";cv.style.height=innerHeight+"px";ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0)}
+addEventListener("resize",()=>{resize(); if(map)map.invalidateSize()});resize();
+
+function initMap(){
+ map=L.map("map",{zoomControl:false,attributionControl:true}).setView([50.2343,11.7240],15);
+ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+ marker=L.marker([50.2343,11.7240]).addTo(map);
+}
+function locate(){
+ if(!navigator.geolocation)return;
+ navigator.geolocation.watchPosition(p=>{
+   userPos=[p.coords.latitude,p.coords.longitude];
+   $("gps").textContent="GPS "+userPos[0].toFixed(5)+", "+userPos[1].toFixed(5);
+   marker.setLatLng(userPos); map.setView(userPos,16);
+ },()=>{$("gps").textContent="GPS НЕДОСТУПЕН"},{enableHighAccuracy:true,maximumAge:10000,timeout:10000});
+}
+
+async function routeTo(destination){
+ const d=destination.trim(); if(!d){toast("Введи адрес");return}
+ if(!userPos){toast("Ожидаю GPS");return}
+ try{
+   $("routeInfo").style.display="block"; $("routeInfo").textContent="Ищу место…";
+   const q=encodeURIComponent(d);
+   const geo=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${q}`,{headers:{"Accept-Language":"ru"}});
+   if(!geo.ok)throw new Error("Геокодер недоступен");
+   const places=await geo.json(); if(!places.length)throw new Error("Место не найдено");
+   const dest=[Number(places[0].lat),Number(places[0].lon)];
+   const route=await fetch(`https://router.project-osrm.org/route/v1/driving/${userPos[1]},${userPos[0]};${dest[1]},${dest[0]}?overview=full&geometries=geojson`);
+   if(!route.ok)throw new Error("Маршрутизатор недоступен");
+   const rr=await route.json(); if(!rr.routes?.length)throw new Error("Маршрут не найден");
+   const r=rr.routes[0];
+   if(routeLayer)map.removeLayer(routeLayer);
+   routeLayer=L.geoJSON(r.geometry,{style:{color:"#55eaff",weight:5,opacity:.9}}).addTo(map);
+   map.fitBounds(routeLayer.getBounds(),{padding:[15,15]});
+   const km=(r.distance/1000).toFixed(1), min=Math.round(r.duration/60);
+   $("routeInfo").textContent=`${places[0].display_name} · ${km} км · ~${min} мин`;
+   addLog("ai",`Маршрут построен: ${km} км, примерно ${min} минут.`);
+ }catch(e){$("routeInfo").textContent="Ошибка: "+e.message;toast(e.message)}
+}
+
+async function listCameras(){
+  const box=$("deviceList"); box.innerHTML="";
+  if(!navigator.mediaDevices?.enumerateDevices){ box.textContent="Браузер не даёт список устройств."; return; }
+  try{
+    const devices=await navigator.mediaDevices.enumerateDevices();
+    const cams=devices.filter(d=>d.kind==="videoinput");
+    if(!cams.length){box.textContent="Камера не найдена. Подключи веб-камеру и обнови страницу.";return}
+    cams.forEach((d,i)=>{const row=document.createElement("div");row.className="deviceChoice";row.textContent=`Камера ${i+1}: ${d.label||"устройство без названия"}`;box.appendChild(row)});
+  }catch(e){box.textContent="Не удалось получить список камер."}
+}
+async function camera(){
+  if(!navigator.mediaDevices?.getUserMedia){
+    $("cameraStatus").textContent="Камера: getUserMedia недоступен. Открой http://127.0.0.1:8000 в Chrome/Edge.";$("cameraStatus").className="err";return false;
+  }
+  try{
+    if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;$("cameraBtn").classList.remove("active");$("cameraStatus").textContent="Камера: остановлена";$("cameraStatus").className="";return false}
+    let s;
+    const tries=[
+      {video:{width:{ideal:1280},height:{ideal:720}},audio:false},
+      {video:{facingMode:"user",width:{ideal:1280},height:{ideal:720}},audio:false},
+      {video:true,audio:false}
+    ];
+    let lastErr=null;
+    for(const constraints of tries){try{s=await navigator.mediaDevices.getUserMedia(constraints);break}catch(e){lastErr=e}}
+    if(!s)throw lastErr||new Error("Камера недоступна");
+    stream=s; video.srcObject=stream; await video.play();
+    $("cameraBtn").classList.add("active"); $("cameraStatus").textContent="Камера: ONLINE"; $("cameraStatus").className="ok";
+    $("bootText").textContent="Камера подключена";
+    setTimeout(()=>$("boot").classList.add("hidden"),500);
+    await listCameras();
+    return true;
+  }catch(e){
+    const name=e?.name||"UnknownError"; const msg=name==="NotAllowedError"?"Доступ запрещён. Нажми значок камеры в адресной строке → Разрешить.":name==="NotFoundError"?"Камера не найдена.":name==="NotReadableError"?"Камера занята другой программой.":("Ошибка: "+(e?.message||name));
+    $("cameraStatus").textContent="Камера: "+msg; $("cameraStatus").className="err"; toast(msg); return false;
+  }
+}
+function battery(){
+ if(navigator.getBattery)navigator.getBattery().then(b=>{function f(){let p=Math.round(b.level*100)+"%";$("bat").textContent=p;$("batTop").textContent=p}f();b.addEventListener("levelchange",f)}).catch(()=>{});
+}
+function wire(){
+ const c=$("wire"),x=c.getContext("2d"),w=c.clientWidth,h=c.clientHeight,d=devicePixelRatio||1;c.width=w*d;c.height=h*d;x.setTransform(d,0,0,d,0,0);x.clearRect(0,0,w,h);x.strokeStyle="#55eaff";x.lineWidth=1;
+ const L=[[38,18,120,18],[38,18,38,78],[120,18,120,78],[38,78,120,78],[48,28,130,28],[48,28,48,88],[130,28,130,88],[48,88,130,88],[38,18,48,28],[120,18,130,28],[38,78,48,88],[120,78,130,88],[25,91,130,98],[25,91,16,118],[130,98,141,118],[16,118,141,118],[38,78,16,118],[120,78,141,118]];
+ L.forEach(a=>{x.beginPath();x.moveTo(a[0],a[1]);x.lineTo(a[2],a[3]);x.stroke()});
+ for(let y=40;y<115;y+=13){x.beginPath();x.moveTo(18,y);x.lineTo(140,y+5);x.stroke()}
+}
+function label(n){return labels[n]||modelNames[n]||String(n).toUpperCase()}
+function estimate(p){return Math.max(.6,3.8-(p.bbox[2]/video.videoWidth)*2.7).toFixed(1)}
+function videoRect(){
+ const vw=video.videoWidth||1280,vh=video.videoHeight||720,scale=Math.max(innerWidth/vw,innerHeight/vh),dw=vw*scale,dh=vh*scale;return {scale,ox:(innerWidth-dw)/2,oy:(innerHeight-dh)/2}
+}
+function boxScreen(p){const {scale,ox,oy}=videoRect(),b=p.bbox;return {x:b[0]*scale+ox,y:b[1]*scale+oy,w:b[2]*scale,h:b[3]*scale}}
+function drawBox(p,i=-1){
+ const {x,y,w,h}=boxScreen(p),isSel=(i===selectedIndex||p===last);ctx.strokeStyle=isSel?"#57f39b":"#55eaff";ctx.lineWidth=isSel?3:2;ctx.strokeRect(x,y,w,h);ctx.fillStyle=isSel?"#57f39b":"#55eaff";ctx.font="bold 13px Arial";const txt=label(p.class)+" "+Math.round(p.score*100)+"%";ctx.fillText(txt,x,Math.max(16,y-7));
+ if(isSel){ctx.beginPath();ctx.arc(x+w/2,y+h/2,6,0,Math.PI*2);ctx.fill();}
+}
+function updateSelected(p,open3d=false){
+ if(!p)return;last=p;selectedClassRaw=p.class;const n=label(p.class),q=Math.round(p.score*100),dist=estimate(p);$("objName").textContent=n;$("conf").textContent=q+"%";$("statObj").textContent=n+" ("+q+"%)";$("dims").innerHTML=`РАЗМЕР (оценка)<br>В: ${Math.round(p.bbox[3]*.45)} см · Ш: ${Math.round(p.bbox[2]*.35)} см<br>Г: ${Math.round(p.bbox[2]*.30)} см<br>РАССТОЯНИЕ: ${dist} м`;$('scanLabel').style.display='block';show3DForObject(p.class,open3d);renderObjectChips();}
+function renderObjectChips(){const box=$("objList");box.innerHTML="";if(!allObjects.length){box.textContent="Список объектов: —";return}allObjects.slice(0,10).forEach((o,i)=>{const b=document.createElement("button");b.className="objChip"+(i===selectedIndex?" selected":"");b.textContent=label(o.class)+" "+Math.round(o.score*100)+"%";b.onclick=()=>{selectedIndex=i;updateSelected(allObjects[i],true)};box.appendChild(b)})}
+function updateObjects(arr){allObjects=(arr||[]).slice();renderObjectChips()}
+async function detect(){
+ if(!running)return;
+ if(video.readyState>=2 && model && scanning){
+  try{
+   const arr=await model.detect(video);ctx.clearRect(0,0,innerWidth,innerHeight);updateObjects(arr);
+   if(arr.length){if(selectedIndex>=arr.length)selectedIndex=0;const p=arr[selectedIndex]||arr.slice().sort((a,b)=>b.score-a.score)[0];last=p;arr.forEach((o,i)=>drawBox(o,i));updateSelected(p,false)}
+   else{$("objName").textContent="НЕ НАЙДЕН";$ ("conf").textContent="—";$ ("statObj").textContent="NONE";$('scanLabel').style.display='none';}
+  }catch(e){console.warn(e);$("aiText").textContent="CV: "+e.message}
+ }
+ setTimeout(()=>requestAnimationFrame(detect),180);
+}
+cv.addEventListener("click",e=>{
+ if(!allObjects.length)return;for(let i=0;i<allObjects.length;i++){const r=boxScreen(allObjects[i]);if(e.clientX>=r.x&&e.clientX<=r.x+r.w&&e.clientY>=r.y&&e.clientY<=r.y+r.h){selectedIndex=i;updateSelected(allObjects[i],true);toast("Выбран: "+label(allObjects[i].class));return}}
+});
+async function loadVision(){
+ try{$("bootText").textContent="Загрузка быстрого зрения…";await tf.ready();model=await cocoSsd.load({base:"lite_mobilenet_v2"});running=true;$("bootText").textContent="Компьютерное зрение готово";setTimeout(()=>$("boot").classList.add("hidden"),600);detect();}
+ catch(e){$("bootText").textContent="CV: "+e.message;toast("Модель зрения не загрузилась")}
+}
+
+async function loadExpandedDetector(){
+ if(expandedDetector)return expandedDetector;
+ $("aiText").textContent="Загружаю расширенное ИИ-зрение…";
+ try{
+   const {pipeline}=await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1");
+   expandedDetector=await pipeline("zero-shot-object-detection","onnx-community/grounding-dino-tiny-ONNX",{dtype:"q4f16"});
+   return expandedDetector;
+ }catch(e){toast("Расширенная модель не загрузилась: "+e.message);throw e}
+}
+async function expandedScan(){
+ if(video.readyState<2){toast("Сначала запусти камеру");return}
+ try{
+   const det=await loadExpandedDetector();
+   const frame=new OffscreenCanvas(640,Math.round(640*video.videoHeight/video.videoWidth));const fx=frame.getContext("2d");fx.drawImage(video,0,0,frame.width,frame.height);
+   const blob=await frame.convertToBlob({type:"image/jpeg",quality:.82});
+   const url=URL.createObjectURL(blob);const im=new Image();await new Promise((res,rej)=>{im.onload=res;im.onerror=rej;im.src=url});
+   const res=await det(im,candidateLabels,{threshold:0.18,top_k:12});URL.revokeObjectURL(url);
+   allObjects=res.map(x=>({class:x.label,score:x.score,bbox:[x.box.xmin,x.box.ymin,x.box.xmax-x.box.xmin,x.box.ymax-x.box.ymin]}));
+   selectedIndex=0; updateObjects(allObjects); if(res.length){updateSelected(allObjects[0],false);$("dims").innerHTML="РАЗМЕР: ИИ-оценка<br>РАССТОЯНИЕ: нет точного датчика";$("aiText").textContent=`Расширенное сканирование: найдено ${res.length} объектов.`} else $("aiText").textContent="Расширенное ИИ-зрение не нашло подходящих объектов.";
+ }catch(e){console.error(e);$("aiText").textContent="Ошибка расширенного сканирования: "+(e?.message||e);toast("AI-скан не запустился")}
+}
+
+async function depth3D(){
+ if(video.readyState<2){toast("Сначала запусти камеру");return}
+ $("model3d").style.display="block"; if(!three)init3d();
+ try{
+  $("model3d").querySelector(".modelTitle").textContent="BORZ · 3D ГЛУБИНА";
+  const {pipeline}=await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1");
+  depthEstimator=depthEstimator||await pipeline("depth-estimation","onnx-community/depth-anything-v2-small",{dtype:"q4f16"});
+  const frame=new OffscreenCanvas(320,Math.round(320*video.videoHeight/video.videoWidth));const fx=frame.getContext("2d");fx.drawImage(video,0,0,frame.width,frame.height);const blob=await frame.convertToBlob({type:"image/jpeg",quality:.75});const url=URL.createObjectURL(blob);const im=new Image();await new Promise((res,rej)=>{im.onload=res;im.onerror=rej;im.src=url});
+  const out=await depthEstimator(im);URL.revokeObjectURL(url); buildDepthCloud(out.predicted_depth);
+  $("aiText").textContent="3D-карта глубины построена. Это относительная глубина, не LiDAR.";
+ }catch(e){toast("3D-глубина недоступна: "+e.message)}
+}
+function buildDepthCloud(tensor){
+ if(!three||!tensor)return;const geom=three.userData.cloudGeom;if(geom)three.scene.remove(three.userData.cloud);const data=tensor.data;const [h,w]=tensor.dims||[128,128];const count=Math.min(9000,w*h);const step=Math.max(1,Math.floor(Math.sqrt((w*h)/count)));const pos=[];for(let y=0;y<h;y+=step){for(let x=0;x<w;x+=step){const i=y*w+x;const d=data[i]||0;const z=(d/(Math.max(...data)||1))*.9;pos.push((x/w-.5)*2,-(y/h-.5)*2,z*2)}}const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));const m=new THREE.PointsMaterial({color:0x55eaff,size:.018});const cloud=new THREE.Points(g,m);three.scene.add(cloud);three.userData.cloudGeom=g;three.userData.cloud=cloud;
+}
+function init3d(){
+ if(three)return; const box=$("three");const scene=new THREE.Scene();const cam=new THREE.PerspectiveCamera(40,1,.1,100);const r=new THREE.WebGLRenderer({alpha:true,antialias:true});cam.position.set(2.8,2.0,4.3);r.setPixelRatio(Math.min(devicePixelRatio,2));r.setSize(Math.min(360,box.clientWidth||340),Math.min(360,box.clientHeight||340));box.innerHTML="";box.appendChild(r.domElement);scene.add(new THREE.AmbientLight(0xffffff,1.35));const dl=new THREE.DirectionalLight(0xffffff,2.2);dl.position.set(3,5,4);scene.add(dl);scene.add(new THREE.GridHelper(5,14,0x55eaff,0x15383e));three={scene,camera:cam,renderer:r,modelGroup:null,label:"",userData:{}};cam.lookAt(0,.8,0);(function anim(){requestAnimationFrame(anim);if(three.modelGroup)three.modelGroup.rotation.y+=.009;r.render(scene,cam)})();
+}
+
+async function checkMic(){
+  if(!navigator.mediaDevices?.getUserMedia){$("voiceStatus").textContent="Микрофон: API недоступен";$("voiceStatus").className="err";return false}
+  try{
+    const s=await navigator.mediaDevices.getUserMedia({audio:true});
+    s.getTracks().forEach(t=>t.stop());
+    $("voiceStatus").textContent="Микрофон: ONLINE";$("voiceStatus").className="ok"; return true;
+  }catch(e){
+    const msg=e?.name==="NotAllowedError"?"Доступ запрещён. Разреши микрофон в адресной строке браузера.":("Ошибка: "+(e?.message||e.name));
+    $("voiceStatus").textContent="Микрофон: "+msg;$("voiceStatus").className="err";toast(msg);return false;
+  }
+}
+async function startVoice(){
+  const R=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!R){$("voiceStatus").textContent="Голосовой ввод: Chrome/Edge не предоставляет SpeechRecognition";$("voiceStatus").className="err";toast("Голосовой ввод недоступен в этом браузере");return}
+  const ok=await checkMic(); if(!ok)return;
+  const r=new R();r.lang="ru-RU";r.continuous=false;r.interimResults=false;r.maxAlternatives=1;
+  r.onstart=()=>{$("voiceStatus").textContent="Микрофон: слушаю…";$('voiceStatus').className="ok";$('aiText').textContent="Слушаю, СЭР…"};
+  r.onresult=e=>{const q=e.results?.[0]?.[0]?.transcript||"";if(q)askAI(q)};
+  r.onerror=e=>{const msg=e.error==="not-allowed"?"Браузер запретил микрофон.":("Ошибка распознавания: "+e.error);$("voiceStatus").textContent=msg;$("voiceStatus").className="err";toast(msg)};
+  r.onend=()=>{if($("voiceStatus").textContent.includes("слушаю"))$("voiceStatus").textContent="Микрофон: готов"};
+  try{r.start()}catch(e){toast("Не удалось запустить голосовой ввод")};
+}
+
+
+async function checkAI(){
+  try{
+    const r=await fetch("/api/status",{cache:"no-store"});
+    const d=await r.json();
+    const ok=d?.ollama?.ok===true;
+    if(aiBackend==="local") { $("aiModeLabel").textContent=ok?`OLLAMA / ${d.ollama.model}`:"OLLAMA OFFLINE"; }
+    else if(aiBackend!=="browser") { $("aiModeLabel").textContent=ok?`OLLAMA / ${d.ollama.model}`:"OPEN AI · БРАУЗЕР"; }
+    $("aiModeLabel").className=ok?"ok":"";
+    return ok;
+  }catch(e){
+    $("aiModeLabel").textContent="OPEN AI · БРАУЗЕР";
+    return false;
+  }
+}
+
+async function loadBrowserAI(){
+  if(browserGenerator) return browserGenerator;
+  $("aiText").textContent="Загружаю открытый ИИ BORZ в браузер… первый запуск может занять время.";
+  const {pipeline}=await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1");
+  const opts={dtype:"q4"};
+  if(navigator.gpu) opts.device="webgpu";
+  browserGenerator=await pipeline("text-generation","onnx-community/Qwen2.5-0.5B-Instruct",opts);
+  $("aiModeLabel").textContent="OPEN AI · QWEN 0.5B";
+  $("aiModeLabel").className="ok";
+  return browserGenerator;
+}
+
+async function askBrowserAI(question,context){
+  const generator=await loadBrowserAI();
+  const messages=[
+    {role:"system",content:"Ты BORZ, персональный ИИ-ассистент. Отвечай на русском языке, обращайся к пользователю как СЭР. Будь кратким и точным. Не утверждай, что видишь данные, которых нет в контексте."},
+    {role:"user",content:`Запрос: ${question}\nКонтекст BORZ: ${JSON.stringify(context)}`}
+  ];
+  const out=await generator(messages,{max_new_tokens:220,do_sample:false});
+  const generated=out?.[0]?.generated_text;
+  if(Array.isArray(generated)) return String(generated.at(-1)?.content||"").trim();
+  return String(generated||"").trim();
+}
+
+async function executeCommand(q){
+  const x=q.toLowerCase().trim();
+  if(/^(открой|покажи|включи).*(карт|навигац)/.test(x)){$("mapBox").classList.remove("hidden");setTimeout(()=>map.invalidateSize(),100);return "Карта открыта."}
+  if(/^(закрой|скрой).*(карт|навигац)/.test(x)){$("mapBox").classList.add("hidden");return "Карта закрыта."}
+  if(/(запусти|включи|открой).*(камер)/.test(x)){const ok=stream?true:await camera();return ok?"Камера подключена.":"Камера не запущена."}
+  if(/(выключи|останови).*(камер)/.test(x)){if(stream)await camera();return "Камера остановлена."}
+  if(/(сканируй|просканируй|ai scan|ии скан)/.test(x)){if(!stream){const ok=await camera();if(!ok)return "Не удалось запустить камеру."}await expandedScan();return "Запустил ИИ-сканирование."}
+  if(/(живое скан|live scan).*(выключ|стоп|отключ)/.test(x)){scanning=false;$("scanLabel").style.display="none";return "Живое сканирование выключено."}
+  if(/(живое скан|live scan).*(включ|запуст)/.test(x)){scanning=true;$("scanLabel").style.display="block";return "Живое сканирование включено."}
+  if(/(закрой|скрой).*(3d|3д|модел)/.test(x)){$("model3d").style.display="none";return "3D-окно закрыто."}
+  const m3=x.match(/(?:покажи|открой|создай|сделай).*(?:3d|3д).*(?:модел[ьи]?|объект)?\s*(?:для|:)?\s*(человек|стул|стол|бутылк\w*|телефон|ноутбук|компьютер|пк|машин\w*|автомобил\w*|собак\w*|кошк\w*|монитор|телевизор|клавиатур\w*|мыш\w*)?/i);
+  if(m3){const obj=(m3[1]||last?.class||"объект").trim();show3DForObject(obj,true);return `Открываю 3D-модель: ${label(modelKey(obj))}.`;}
+  const route=q.match(/(?:маршрут|проложи путь|навигация)\s+(?:до|к|на)?\s*(.+)$/i);
+  if(route){$("mapBox").classList.remove("hidden");$("dest").value=route[1].trim();await routeTo(route[1].trim());return "Маршрут построен."}
+  const search=q.match(/(?:найди|поищи|поиск|гугли)\s+(?:в интернете\s+)?(.+)/i);
+  if(search){const term=search[1].trim();window.open("https://www.google.com/search?q="+encodeURIComponent(term),"_blank");return `Открываю поиск: ${term}.`;}
+  if(/(покажи|открой).*(3d|3д)/.test(x)&&last){show3DForObject(last.class,true);return `Открываю 3D-модель: ${label(last.class)}.`}
+  return null;
+}
+
+async function askAI(question){
+ const q=question.trim();if(!q)return;addLog("user",q);$("aiInput").value="";$("aiText").textContent="BORZ думает…";
+ try{
+   const command=await executeCommand(q);
+   if(command){$("aiText").textContent=command;addLog("ai",command);speak(command);return;}
+   const context={objects:allObjects.slice(0,12).map(o=>({label:o.class,score:o.score,bbox:o.bbox})),selected:last?{label:last.class,score:last.score,distance_m:Number(estimate(last))}:null,gps:userPos,route:$("routeInfo").textContent||null};
+   let answer="";
+   if(aiBackend==="browser") answer=await askBrowserAI(q,context);
+   else {
+     try{
+       const r=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q,context})});
+       const data=await r.json(); if(!r.ok||!data.answer)throw new Error(data.error||"Local AI unavailable"); answer=data.answer;
+     }catch(localErr){
+       $("aiText").textContent="Локальный ИИ недоступен. Переключаюсь на открытый браузерный Qwen…";
+       answer=await askBrowserAI(q,context);aiBackend="browser";
+     }
+   }
+   if(!answer)throw new Error("ИИ вернул пустой ответ");
+   $("aiText").textContent=answer;addLog("ai",answer);speak(answer);
+ }catch(e){console.error(e);const msg="BORZ: ИИ не загрузился: "+(e?.message||e);$("aiText").textContent=msg;addLog("ai",msg)}
+}
+
+$("cameraBtn").onclick=camera;
+$("permCamera").onclick=camera;
+$("permMic").onclick=checkMic;
+$("permClose").onclick=()=>$("permissionPanel").classList.add("hidden");
+$("aiBtn").onclick=()=>{$("aiInput").focus();$("aiText").textContent="Задайте вопрос BORZ. Можете нажать 🎙 для голоса."};
+$("searchBtn").onclick=()=>{const q=last?label(last.class):($("objName").textContent||"окружение");window.open("https://www.google.com/search?q="+encodeURIComponent(q),"_blank");$("aiText").textContent="Открываю поиск: "+q};
+$("scanBtn").onclick=async function(){
+  if(!stream){const ok=await camera();if(!ok)return}
+  await expandedScan();
+};
+$("liveScanBtn").onclick=function(){scanning=!scanning;this.textContent=scanning?"LIVE SCAN: ON":"LIVE SCAN: OFF";this.classList.toggle("green",scanning);$("scanBtn").classList.toggle("active",scanning);$("scanLabel").style.display=scanning?"block":"none";$("aiText").textContent=scanning?"Живое распознавание включено.":"Живое распознавание остановлено."};
+$("aiScanBtn").onclick=async()=>{if(!stream){const ok=await camera();if(!ok)return}await expandedScan()};
+$("mapBtn").onclick=()=>{$("mapBox").classList.toggle("hidden");setTimeout(()=>map.invalidateSize(),100)};
+$("route").onclick=()=>routeTo($("dest").value);
+$("open3d").onclick=()=>{if(last)show3DForObject(last.class,true);else depth3D();};
+$("close3d").onclick=()=>{$("model3d").style.display="none"};
+$("sendAI").onclick=()=>askAI($("aiInput").value);
+$("aiInput").addEventListener("keydown",e=>{if(e.key==="Enter")askAI($("aiInput").value)});
+$("localMode").onclick=async()=>{aiBackend="local";$("localMode").classList.add("active");$("browserMode").classList.remove("active");const ok=await checkAI();$("aiModeLabel").textContent=ok?"OLLAMA / QWEN":"OLLAMA OFFLINE";};
+$("browserMode").onclick=async()=>{aiBackend="browser";$("browserMode").classList.add("active");$("localMode").classList.remove("active");$("aiModeLabel").textContent="OPEN AI · QWEN 0.5B";$("aiText").textContent="Открытый браузерный ИИ готовится…";try{await loadBrowserAI();$("aiText").textContent="Открытый Qwen работает прямо в браузере, без API-ключа."}catch(e){$("aiText").textContent="Не удалось загрузить браузерный ИИ: "+e.message}};
+$("mic").onclick=startVoice;
+$("bootText").textContent="Ожидание камеры…";
+$("scanMenu").querySelectorAll(".scanExtra").forEach(b=>b.classList.add("show"));
+listCameras(); battery(); wire(); initMap(); locate(); initMini3D(); loadVision(); checkAI();
+})();
+</script>
+</body>
+</html>
