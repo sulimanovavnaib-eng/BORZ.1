@@ -3,497 +3,1928 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#05080c">
-<title>BORZ — AI Helmet Core</title>
+<title>BORZ Vision</title>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
 
 <style>
 :root{
-  --cyan:#70e7ff;
-  --cyan2:#2aa9c8;
-  --bg:#030608;
-  --panel:rgba(7,14,20,.86);
-  --line:rgba(112,231,255,.42);
-  --text:#f2f7fa;
-  --muted:#91a4ad;
-  --green:#35e875;
-  --red:#ff5364;
+ --cyan:#69eaff;
+ --bg:#03070b;
+ --panel:rgba(3,10,15,.84);
+ --line:rgba(105,234,255,.42)
 }
+
 *{box-sizing:border-box}
-html,body{margin:0;width:100%;height:100%;background:#000;color:var(--text);
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
-  overflow:hidden}
+
+html,body{
+ margin:0;
+ width:100%;
+ height:100%;
+ overflow:hidden;
+ background:#000;
+ color:#eafaff;
+ font-family:Arial,sans-serif
+}
+
 button,input{font:inherit}
-button{color:var(--text);background:rgba(5,13,19,.88);border:1px solid var(--line);
-  border-radius:16px;cursor:pointer;-webkit-tap-highlight-color:transparent}
-button:active{transform:scale(.97)}
-#app{position:relative;width:100%;height:100%;overflow:hidden;background:
- radial-gradient(circle at 50% 25%,rgba(20,90,110,.12),transparent 35%),
- linear-gradient(180deg,#05090d,#020304 80%)}
-#camera{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;background:#000}
-#camera.mirror{transform:scaleX(-1)}
-#cameraShade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.22),transparent 35%,rgba(0,0,0,.28));display:none;pointer-events:none}
-#hud{position:absolute;inset:0;padding:max(14px,env(safe-area-inset-top)) 14px max(16px,env(safe-area-inset-bottom));pointer-events:none}
-#hud>*{pointer-events:auto}
-.top{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.logo{font-weight:900;letter-spacing:7px;font-size:23px;text-shadow:0 0 14px rgba(112,231,255,.25)}
-.status{border:1px solid var(--line);border-radius:24px;padding:8px 13px;font-size:12px;backdrop-filter:blur(12px);background:rgba(3,9,13,.6)}
-.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--green);margin-right:7px;box-shadow:0 0 10px var(--green)}
-.layout{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
-.left{display:flex;flex-direction:column;gap:10px}
-.card{border:1px solid var(--line);background:var(--panel);border-radius:18px;padding:12px;backdrop-filter:blur(12px);box-shadow:0 0 24px rgba(0,0,0,.18)}
-.label{font-size:11px;color:var(--muted);letter-spacing:.7px;text-transform:uppercase}
-.value{font-size:16px;margin-top:7px;line-height:1.25}
-#navCard{height:228px;position:relative;overflow:hidden}
-#navGrid{position:absolute;inset:0;background:
- linear-gradient(rgba(112,231,255,.14) 1px,transparent 1px),
- linear-gradient(90deg,rgba(112,231,255,.14) 1px,transparent 1px);
-background-size:28px 28px;transform:perspective(250px) rotateX(55deg) translateY(40px);transform-origin:center bottom}
-#navArrow{position:absolute;left:50%;top:42%;width:135px;height:8px;border-radius:8px;background:var(--cyan);
-transform:translateX(-8%) rotate(-23deg);box-shadow:0 0 18px rgba(112,231,255,.75)}
-#navArrow:after{content:"";position:absolute;right:-3px;top:-8px;border-left:26px solid var(--cyan);border-top:12px solid transparent;border-bottom:12px solid transparent}
-#navText{position:absolute;left:15px;bottom:14px;font-size:13px}
-#objectPanel{position:absolute;left:7%;right:7%;bottom:98px;text-align:center}
-#objectName{font-size:21px;font-weight:800}
-.pill{display:inline-block;margin-top:8px;border:1px solid var(--line);border-radius:22px;padding:7px 13px;font-size:13px;background:rgba(3,9,13,.7)}
-.controls{position:absolute;left:5%;right:5%;bottom:max(16px,env(safe-area-inset-bottom));display:flex;justify-content:center;flex-wrap:wrap;gap:9px}
-.controls button{padding:11px 13px;font-size:13px;backdrop-filter:blur(12px)}
-.primary{background:rgba(20,80,100,.42)}
-#toast{position:absolute;left:50%;top:18%;transform:translate(-50%,-20px);opacity:0;transition:.25s;
-border:1px solid var(--line);background:rgba(4,12,17,.94);padding:11px 16px;border-radius:14px;z-index:20;max-width:88%;text-align:center}
-#toast.show{opacity:1;transform:translate(-50%,0)}
-#aiBox{position:absolute;left:5%;right:5%;bottom:168px;display:none;border:1px solid var(--line);
-background:rgba(3,9,13,.94);border-radius:18px;padding:12px;backdrop-filter:blur(14px);z-index:15}
-#aiInput{width:100%;background:#071016;border:1px solid rgba(112,231,255,.3);color:white;border-radius:12px;padding:11px;outline:none}
-.airow{display:flex;gap:8px;margin-top:8px}.airow button{flex:1;padding:10px}
-#cameraPanel{position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);width:88%;max-width:430px;
-display:none;z-index:12}
-#scanCanvas{width:100%;border-radius:18px;border:1px solid var(--line);background:#000}
-#detections{margin-top:8px;max-height:100px;overflow:auto}
-.det{padding:7px 9px;border-bottom:1px solid rgba(112,231,255,.16);font-size:13px}
-#modelModal{position:absolute;inset:0;background:rgba(0,0,0,.8);display:none;z-index:30;align-items:center;justify-content:center;padding:18px}
-#modelBox{width:100%;max-width:520px;height:78%;border:1px solid var(--line);border-radius:22px;background:#05090d;overflow:hidden;position:relative}
-#modelTitle{position:absolute;left:15px;top:12px;z-index:2;font-weight:800}
-#modelCanvas{width:100%;height:100%;display:block}
-.modalBtns{position:absolute;right:12px;top:8px;z-index:3;display:flex;gap:7px}.modalBtns button{padding:7px 10px}
-#navModal{position:absolute;inset:0;background:rgba(0,0,0,.82);z-index:25;display:none;padding:20px}
-#navBox{height:100%;border:1px solid var(--line);border-radius:22px;background:#05090d;padding:15px;overflow:auto}
-#dest{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:#071016;color:white;outline:none;margin-top:10px}
-.routeBtn{margin-top:9px;padding:11px 14px}
-#routeResult{margin-top:14px;line-height:1.5;color:#dbe8ed}
-.hidden{display:none!important}
+
+#app{
+ position:relative;
+ width:100%;
+ height:100%;
+ overflow:hidden;
+ background:#05090d
+}
+
+#camera{
+ position:absolute;
+ inset:0;
+ width:100%;
+ height:100%;
+ object-fit:cover;
+ display:none;
+ opacity:.48
+}
+
+#camera.on{display:block}
+
+.hud{
+ position:absolute;
+ inset:0;
+ pointer-events:none
+}
+
+.top{
+ position:absolute;
+ top:max(12px,env(safe-area-inset-top));
+ left:18px;
+ right:18px;
+ display:flex;
+ justify-content:space-between;
+ align-items:center
+}
+
+.logo{
+ font-size:19px;
+ font-weight:800;
+ letter-spacing:5px
+}
+
+.status{
+ font-size:11px;
+ padding:8px 11px;
+ border:1px solid var(--line);
+ border-radius:18px;
+ background:var(--panel);
+ backdrop-filter:blur(8px)
+}
+
+.dot{
+ display:inline-block;
+ width:7px;
+ height:7px;
+ border-radius:50%;
+ background:#45ef70;
+ box-shadow:0 0 9px #45ef70;
+ margin-right:6px
+}
+
+.left{
+ position:absolute;
+ left:18px;
+ top:72px;
+ width:min(345px,46vw);
+ display:grid;
+ gap:9px
+}
+
+.card{
+ background:var(--panel);
+ border:1px solid var(--line);
+ border-radius:15px;
+ padding:11px;
+ backdrop-filter:blur(10px)
+}
+
+.small{
+ font-size:10px;
+ color:#9bb8c1
+}
+
+.value{
+ font-size:14px;
+ margin-top:5px;
+ line-height:1.3
+}
+
+.route{
+ position:absolute;
+ right:18px;
+ top:72px;
+ width:min(350px,44vw);
+ height:190px;
+ border:1px solid var(--line);
+ border-radius:15px;
+ overflow:hidden;
+ background:linear-gradient(
+  135deg,
+  rgba(9,30,38,.93),
+  rgba(3,8,12,.92)
+ )
+}
+
+.grid{
+ position:absolute;
+ inset:0;
+ background-image:
+ linear-gradient(rgba(105,234,255,.08) 1px,transparent 1px),
+ linear-gradient(90deg,rgba(105,234,255,.08) 1px,transparent 1px);
+ background-size:24px 24px;
+ transform:perspective(350px) rotateX(55deg) scale(1.6);
+ transform-origin:center bottom
+}
+
+.routeLine{
+ position:absolute;
+ width:70%;
+ height:4px;
+ left:15%;
+ top:57%;
+ background:var(--cyan);
+ transform:rotate(-23deg);
+ box-shadow:0 0 15px var(--cyan);
+ border-radius:8px
+}
+
+.arrow{
+ position:absolute;
+ right:15%;
+ top:31%;
+ font-size:32px;
+ color:var(--cyan)
+}
+
+.routeText{
+ position:absolute;
+ left:10px;
+ bottom:9px;
+ font-size:10px
+}
+
+#targetBox{
+ position:absolute;
+ display:none;
+ border:2px solid var(--cyan);
+ border-radius:10px;
+ box-shadow:0 0 18px rgba(105,234,255,.4);
+ pointer-events:none;
+ z-index:5
+}
+
+#targetLabel{
+ position:absolute;
+ left:-2px;
+ top:-25px;
+ padding:4px 7px;
+ background:rgba(3,10,15,.92);
+ border:1px solid var(--line);
+ border-radius:7px;
+ font-size:10px;
+ white-space:nowrap
+}
+
+#objectPanel{
+ position:absolute;
+ left:50%;
+ bottom:88px;
+ transform:translateX(-50%);
+ width:min(470px,82vw);
+ text-align:center
+}
+
+#objectName{
+ font-size:18px;
+ font-weight:800
+}
+
+.badge{
+ display:inline-block;
+ margin-top:7px;
+ padding:6px 10px;
+ border-radius:14px;
+ border:1px solid var(--line);
+ font-size:11px
+}
+
+#threePanel{
+ position:absolute;
+ left:50%;
+ top:50%;
+ transform:translate(-50%,-50%);
+ width:min(540px,88vw);
+ height:min(430px,58vh);
+ display:none;
+ background:rgba(2,7,11,.94);
+ border:1px solid var(--line);
+ border-radius:18px;
+ overflow:hidden;
+ pointer-events:auto;
+ z-index:20
+}
+
+#threeCanvas{
+ position:absolute;
+ inset:0;
+ width:100%;
+ height:100%
+}
+
+.threeHead{
+ position:absolute;
+ z-index:2;
+ left:12px;
+ right:12px;
+ top:10px;
+ display:flex;
+ justify-content:space-between;
+ align-items:center
+}
+
+.threeTitle{
+ font-size:12px;
+ font-weight:800
+}
+
+#close3d{
+ border:1px solid var(--line);
+ background:rgba(3,10,15,.85);
+ color:white;
+ border-radius:10px;
+ padding:5px 9px
+}
+
+#aiPanel{
+ position:absolute;
+ left:50%;
+ top:50%;
+ transform:translate(-50%,-50%);
+ width:min(520px,88vw);
+ display:none;
+ pointer-events:auto;
+ z-index:20
+}
+
+#aiInput{
+ width:100%;
+ margin-top:8px;
+ padding:12px;
+ border-radius:11px;
+ border:1px solid var(--line);
+ background:#02070a;
+ color:#fff;
+ outline:none
+}
+
+.row{
+ display:flex;
+ gap:7px;
+ margin-top:8px
+}
+
+.row button{flex:1}
+
+button{
+ border:1px solid var(--line);
+ background:rgba(5,15,21,.94);
+ color:#eafaff;
+ border-radius:11px;
+ padding:9px 11px;
+ font-size:11px;
+ cursor:pointer
+}
+
+button:active{
+ transform:scale(.97)
+}
+
+button.active{
+ background:rgba(21,83,98,.8);
+ box-shadow:0 0 12px rgba(105,234,255,.16)
+}
+
+#toast{
+ position:absolute;
+ z-index:30;
+ left:50%;
+ top:18%;
+ transform:translateX(-50%);
+ background:rgba(3,10,15,.96);
+ border:1px solid var(--line);
+ border-radius:12px;
+ padding:9px 13px;
+ font-size:12px;
+ display:none;
+ max-width:88vw;
+ text-align:center
+}
+
+.controls{
+ position:absolute;
+ z-index:10;
+ bottom:max(12px,env(safe-area-inset-bottom));
+ left:50%;
+ transform:translateX(-50%);
+ display:flex;
+ gap:7px;
+ flex-wrap:wrap;
+ justify-content:center;
+ width:96%;
+ pointer-events:auto
+}
+
+#loading{
+ position:absolute;
+ z-index:25;
+ left:50%;
+ top:50%;
+ transform:translate(-50%,-50%);
+ width:min(430px,86vw);
+ display:none;
+ text-align:center
+}
+
+#loadingBar{
+ height:4px;
+ background:#12303a;
+ border-radius:5px;
+ overflow:hidden;
+ margin-top:9px
+}
+
+#loadingBar i{
+ display:block;
+ height:100%;
+ width:0;
+ background:var(--cyan)
+}
+
 @media(max-width:700px){
-  .layout{grid-template-columns:1fr 1fr}
-  .card{padding:10px}.value{font-size:14px}
-  #navCard{height:205px}
-  #objectPanel{bottom:100px}
+
+ .left{
+  width:190px;
+  top:68px;
+  left:10px
+ }
+
+ .route{
+  width:180px;
+  height:130px;
+  right:10px;
+  top:68px
+ }
+
+ .card{padding:8px}
+
+ .small{font-size:9px}
+
+ .value{font-size:11px}
+
+ .logo{font-size:15px}
+
+ .status{
+  font-size:9px;
+  padding:6px 8px
+ }
+
+ button{
+  font-size:10px;
+  padding:8px 9px
+ }
+
+ #objectPanel{bottom:92px}
+
+ .controls{gap:5px}
 }
 </style>
 </head>
 
 <body>
+
 <div id="app">
-  <video id="camera" playsinline autoplay muted></video>
-  <div id="cameraShade"></div>
 
-  <div id="hud">
-    <div class="top">
-      <div class="logo">BORZ</div>
-      <div class="status"><span class="dot"></span>SYSTEM ONLINE <span id="battery">--%</span></div>
-    </div>
+<video id="camera" autoplay playsinline muted></video>
 
-    <div class="layout">
-      <div class="left">
-        <div class="card">
-          <div class="label">ИИ-АССИСТЕНТ</div>
-          <div class="value" id="assistantStatus">Готов. Нажми AI или скажи команду.</div>
-        </div>
-        <div class="card">
-          <div class="label">РАСПОЗНАВАНИЕ</div>
-          <div class="value" id="recognition">Камера не запущена</div>
-        </div>
-        <div class="card">
-          <div class="label">3D МОДЕЛЬ</div>
-          <div class="value" id="modelStatus">Выбери объект и нажми 3D</div>
-        </div>
-      </div>
-
-      <div class="card" id="navCard">
-        <div id="navGrid"></div>
-        <div id="navArrow"></div>
-        <div id="navText">НАВИГАЦИЯ · <span id="distance">--</span></div>
-      </div>
-    </div>
-
-    <div id="toast"></div>
-
-    <div id="objectPanel" class="card">
-      <div id="objectName">ОБЪЕКТ НЕ ВЫБРАН</div>
-      <div class="pill" id="objectHint">Запусти камеру → Сканировать</div>
-    </div>
-
-    <div id="aiBox">
-      <div class="label">BORZ AI · ЛОКАЛЬНЫЕ КОМАНДЫ</div>
-      <input id="aiInput" placeholder="Например: покажи 3D телефона">
-      <div class="airow">
-        <button id="sendAI" class="primary">Выполнить</button>
-        <button id="speakAI">🎙️ Голос</button>
-        <button id="closeAI">Закрыть</button>
-      </div>
-    </div>
-
-    <div id="cameraPanel">
-      <canvas id="scanCanvas"></canvas>
-      <div class="card" id="detections">Нажми «Сканировать» для распознавания.</div>
-    </div>
-
-    <div class="controls">
-      <button id="cameraBtn">📷 Камера</button>
-      <button id="scanBtn">◉ Сканировать</button>
-      <button id="modelBtn">◇ 3D</button>
-      <button id="aiBtn">AI</button>
-      <button id="voiceBtn">🎙 Голос</button>
-      <button id="navBtn">➤ Навигация</button>
-    </div>
-  </div>
-
-  <div id="modelModal">
-    <div id="modelBox">
-      <div id="modelTitle">3D · <span id="modelTitleName">Объект</span></div>
-      <div class="modalBtns"><button id="rotateBtn">⟳</button><button id="closeModel">✕</button></div>
-      <canvas id="modelCanvas"></canvas>
-    </div>
-  </div>
-
-  <div id="navModal">
-    <div id="navBox">
-      <div class="top">
-        <div style="font-size:20px;font-weight:800">BORZ NAV</div>
-        <button id="closeNav">✕</button>
-      </div>
-      <div class="label" style="margin-top:18px">КУДА ЕДЕМ?</div>
-      <input id="dest" placeholder="Например: Hof, Germany">
-      <button class="routeBtn" id="locateBtn">📍 Определить моё местоположение</button>
-      <button class="routeBtn primary" id="routeBtn">➤ Построить маршрут</button>
-      <div id="routeResult">Маршрут пока не построен.</div>
-    </div>
-  </div>
+<div id="targetBox">
+ <span id="targetLabel">OBJECT</span>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+<div class="hud">
+
+<div class="top">
+
+<div class="logo">BORZ</div>
+
+<div class="status">
+<span class="dot"></span>
+<span id="systemStatus">SYSTEM ONLINE · 100%</span>
+</div>
+
+</div>
+
+
+<div class="left">
+
+<div class="card">
+<div class="small">ИИ-АССИСТЕНТ</div>
+<div class="value" id="aiStatus">
+BORZ готов. Нажми AI или Голос.
+</div>
+</div>
+
+<div class="card">
+<div class="small">РАСПОЗНАВАНИЕ</div>
+<div class="value" id="recognition">
+Камера не запущена
+</div>
+</div>
+
+<div class="card">
+<div class="small">3D МОДЕЛЬ</div>
+<div class="value" id="modelStatus">
+Не выбрана
+</div>
+</div>
+
+</div>
+
+
+<div class="route">
+
+<div class="grid"></div>
+
+<div class="routeLine"></div>
+
+<div class="arrow">➤</div>
+
+<div class="routeText" id="routeText">
+НАВИГАЦИЯ · нажми кнопку
+</div>
+
+</div>
+
+
+<div id="objectPanel" class="card">
+
+<div id="objectName">
+BORZ VISION
+</div>
+
+<div class="badge" id="objectInfo">
+Запусти камеру и нажми «Сканировать»
+</div>
+
+</div>
+
+
+<div id="loading" class="card">
+
+<b>Загрузка BORZ Vision</b>
+
+<div id="loadingText" style="margin-top:7px;font-size:11px">
+Подготовка модели распознавания…
+</div>
+
+<div id="loadingBar">
+<i></i>
+</div>
+
+</div>
+
+
+<div id="aiPanel" class="card">
+
+<div class="small">
+BORZ AI · КОМАНДА
+</div>
+
+<input
+ id="aiInput"
+ autocomplete="off"
+ placeholder="Например: покажи 3D модель человека"
+>
+
+<div class="row">
+
+<button id="runAI">
+Выполнить
+</button>
+
+<button id="closeAI">
+Закрыть
+</button>
+
+</div>
+
+</div>
+
+
+<div id="threePanel">
+
+<div class="threeHead">
+
+<div class="threeTitle" id="threeTitle">
+BORZ · 3D
+</div>
+
+<button id="close3d">
+✕
+</button>
+
+</div>
+
+<canvas id="threeCanvas"></canvas>
+
+</div>
+
+
+<div id="toast"></div>
+
+
+<div class="controls">
+
+<button id="cameraBtn">
+📷 Камера
+</button>
+
+<button id="scanBtn">
+◉ Сканировать
+</button>
+
+<button id="threeBtn">
+◇ 3D
+</button>
+
+<button id="aiBtn">
+AI
+</button>
+
+<button id="voiceBtn">
+🎙 Голос
+</button>
+
+<button id="navBtn">
+➤ Навигация
+</button>
+
+</div>
+
+</div>
+
+</div>
+
 
 <script>
-(() => {
-  const $ = id => document.getElementById(id);
-  const camera = $("camera");
-  const scanCanvas = $("scanCanvas");
-  const scanCtx = scanCanvas.getContext("2d");
-  let stream = null;
-  let detector = null;
-  let selectedObject = "Телефон";
-  let lastDetections = [];
-  let recognition = null;
-  let listening = false;
-  let modelScene, modelCamera, modelRenderer, modelObject, rotate = true, animId;
 
-  const objectNames = {
-    "cell phone":"Телефон","person":"Человек","bottle":"Бутылка","chair":"Стул",
-    "laptop":"Ноутбук","tv":"Телевизор","cup":"Чашка","backpack":"Рюкзак",
-    "book":"Книга","keyboard":"Клавиатура","mouse":"Мышь","car":"Автомобиль",
-    "motorcycle":"Мотоцикл","bus":"Автобус","truck":"Грузовик","dog":"Собака","cat":"Кошка"
-  };
+"use strict";
 
-  function toast(msg){
-    $("toast").textContent = msg;
-    $("toast").classList.add("show");
-    clearTimeout(toast.t);
-    toast.t = setTimeout(() => $("toast").classList.remove("show"), 2500);
+const $ = id => document.getElementById(id);
+
+let stream = null;
+let detector = null;
+let detecting = false;
+let lastDetection = null;
+let recognition = null;
+let currentObject = "человек";
+
+
+const RU = {
+
+person:"человек",
+bicycle:"велосипед",
+car:"автомобиль",
+motorcycle:"мотоцикл",
+airplane:"самолёт",
+bus:"автобус",
+train:"поезд",
+truck:"грузовик",
+boat:"лодка",
+traffic_light:"светофор",
+bird:"птица",
+cat:"кошка",
+dog:"собака",
+horse:"лошадь",
+sheep:"овца",
+cow:"корова",
+elephant:"слон",
+bear:"медведь",
+zebra:"зебра",
+giraffe:"жираф",
+backpack:"рюкзак",
+umbrella:"зонт",
+handbag:"сумка",
+suitcase:"чемодан",
+bottle:"бутылка",
+cup:"чашка",
+fork:"вилка",
+knife:"нож",
+spoon:"ложка",
+bowl:"миска",
+banana:"банан",
+apple:"яблоко",
+pizza:"пицца",
+cake:"торт",
+chair:"стул",
+couch:"диван",
+bed:"кровать",
+dining_table:"стол",
+tv:"телевизор",
+laptop:"ноутбук",
+mouse:"мышь",
+keyboard:"клавиатура",
+cell_phone:"телефон",
+book:"книга",
+clock:"часы",
+scissors:"ножницы",
+toothbrush:"зубная щётка"
+
+};
+
+
+function toast(text){
+
+ $("toast").textContent=text;
+
+ $("toast").style.display="block";
+
+ clearTimeout(window.__toastTimer);
+
+ window.__toastTimer=setTimeout(()=>{
+  $("toast").style.display="none";
+ },2600);
+
+}
+
+
+function speak(text){
+
+ if(!("speechSynthesis" in window)) return;
+
+ speechSynthesis.cancel();
+
+ const u=new SpeechSynthesisUtterance(text);
+
+ u.lang="ru-RU";
+ u.rate=.95;
+
+ speechSynthesis.speak(u);
+
+}
+
+
+function setStatus(text){
+
+ $("aiStatus").textContent=text;
+
+}
+
+
+function updateObject(name,confidence){
+
+ currentObject=name || "объект";
+
+ $("recognition").textContent=
+ confidence
+ ? `${name} · обнаружен · ${Math.round(confidence*100)}%`
+ : `${name} · выбран`;
+
+ $("objectName").textContent=name.toUpperCase();
+
+ $("objectInfo").textContent=
+ "Объект выбран · можно открыть 3D";
+
+ $("modelStatus").textContent=
+ "Готова 3D-модель: "+name;
+
+}
+
+
+/* КАМЕРА */
+
+async function startCamera(){
+
+ if(
+ !navigator.mediaDevices ||
+ !navigator.mediaDevices.getUserMedia
+ ){
+
+  toast(
+   "Камера требует HTTPS. GitHub Pages должен быть открыт через https://"
+  );
+
+  return false;
+
+ }
+
+ try{
+
+  if(stream){
+
+   $("camera").classList.add("on");
+
+   setStatus("Камера уже подключена.");
+
+   return true;
+
   }
 
-  function setSelected(name){
-    selectedObject = name;
-    $("objectName").textContent = name.toUpperCase();
-    $("objectHint").textContent = "Объект выбран · можно открыть 3D";
-    $("modelStatus").textContent = "Модель: " + name;
-    $("assistantStatus").textContent = "Готов. Выбран объект: " + name;
-  }
+  setStatus("Запрашиваю доступ к камере…");
 
-  async function startCamera(){
-    if(stream){
-      stopCamera();
-      return;
-    }
-    if(!navigator.mediaDevices?.getUserMedia){
-      toast("Браузер не дал доступ к камере.");
-      return;
-    }
-    try{
-      stream = await navigator.mediaDevices.getUserMedia({
-        video:{facingMode:{ideal:"environment"},width:{ideal:1280},height:{ideal:720}},
-        audio:false
-      });
-      camera.srcObject = stream;
-      await camera.play();
-      camera.style.display = "block";
-      $("cameraShade").style.display = "block";
-      $("cameraBtn").textContent = "⏹ Камера";
-      $("recognition").textContent = "Камера активна";
-      toast("Камера запущена");
-    }catch(e){
-      toast("Нет доступа к камере. Разреши камеру для сайта.");
-      $("recognition").textContent = "Доступ к камере запрещён";
-    }
-  }
+  stream=await navigator.mediaDevices.getUserMedia({
 
-  function stopCamera(){
-    if(stream) stream.getTracks().forEach(t => t.stop());
-    stream = null; camera.srcObject = null;
-    camera.style.display = "none"; $("cameraShade").style.display = "none";
-    $("cameraBtn").textContent = "📷 Камера";
-    $("recognition").textContent = "Камера выключена";
-  }
+   video:{
+    facingMode:{ideal:"environment"},
+    width:{ideal:1280},
+    height:{ideal:720}
+   },
 
-  async function loadDetector(){
-    if(detector) return detector;
-    $("assistantStatus").textContent = "Загружаю модель распознавания…";
-    try{
-      detector = await cocoSsd.load({base:"mobilenet_v2"});
-      $("assistantStatus").textContent = "Модель распознавания готова.";
-      return detector;
-    }catch(e){
-      console.error(e);
-      toast("Не удалось загрузить модель распознавания.");
-      throw e;
-    }
-  }
+   audio:false
 
-  async function scan(){
-    if(!stream){ await startCamera(); }
-    if(!stream) return;
-    try{
-      await loadDetector();
-      const w = camera.videoWidth || 640, h = camera.videoHeight || 480;
-      scanCanvas.width = w; scanCanvas.height = h;
-      scanCtx.drawImage(camera,0,0,w,h);
-      const preds = await detector.detect(camera,20);
-      lastDetections = preds;
-      scanCtx.lineWidth = Math.max(2,w/350);
-      scanCtx.font = Math.max(14,w/55) + "px Arial";
-      const list = [];
-      preds.forEach(p => {
-        const [x,y,bw,bh] = p.bbox;
-        scanCtx.strokeStyle = "#70e7ff";
-        scanCtx.strokeRect(x,y,bw,bh);
-        const ru = objectNames[p.class] || p.class;
-        scanCtx.fillStyle = "#70e7ff";
-        scanCtx.fillRect(x,y,Math.max(90,bw*.55),28);
-        scanCtx.fillStyle = "#001016";
-        scanCtx.fillText(ru + " " + Math.round(p.score*100) + "%",x+7,y+20);
-        list.push({ru,score:p.score});
-      });
+  });
 
-      if(list.length){
-        const best = list[0];
-        setSelected(best.ru);
-        $("recognition").textContent = best.ru + " · " + Math.round(best.score*100) + "%";
-        $("detections").innerHTML = list.map((x,i)=>
-          `<div class="det"><b>${i+1}. ${x.ru}</b> · ${Math.round(x.score*100)}%</div>`).join("");
-        $("cameraPanel").style.display = "block";
-        toast("Объект распознан: " + best.ru);
-      }else{
-        $("recognition").textContent = "Объект не найден";
-        $("detections").innerHTML = '<div class="det">Ничего не найдено. Наведи камеру на объект и попробуй ещё раз.</div>';
-        $("cameraPanel").style.display = "block";
-        toast("Объект не найден");
-      }
-    }catch(e){
-      console.error(e);
-      toast("Ошибка сканирования.");
-    }
-  }
 
-  function init3D(){
-    if(modelRenderer) return;
-    const canvas = $("modelCanvas");
-    modelScene = new THREE.Scene();
-    modelScene.background = new THREE.Color(0x03080c);
-    modelCamera = new THREE.PerspectiveCamera(45,1,.1,100);
-    modelCamera.position.set(0,1.1,4.5);
-    modelRenderer = new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
-    modelRenderer.setPixelRatio(Math.min(devicePixelRatio,2));
-    modelScene.add(new THREE.AmbientLight(0xffffff,1.5));
-    const light = new THREE.DirectionalLight(0x70e7ff,3); light.position.set(3,4,5); modelScene.add(light);
-    const light2 = new THREE.PointLight(0x2aa9c8,2,10); light2.position.set(-3,1,2); modelScene.add(light2);
-    animate3D();
-  }
+  $("camera").srcObject=stream;
 
-  function clearModel(){
-    if(!modelObject) return;
-    modelScene.remove(modelObject);
-    modelObject.traverse(o => {if(o.geometry)o.geometry.dispose(); if(o.material)o.material.dispose();});
-    modelObject = null;
-  }
+  $("camera").classList.add("on");
 
-  function mat(){ return new THREE.MeshStandardMaterial({color:0x5b6870,metalness:.55,roughness:.3}); }
-  function dark(){ return new THREE.MeshStandardMaterial({color:0x111820,metalness:.7,roughness:.18}); }
-  function cyan(){ return new THREE.MeshStandardMaterial({color:0x70e7ff,emissive:0x104050,emissiveIntensity:1.4,metalness:.3,roughness:.2}); }
+  $("recognition").textContent=
+  "Камера онлайн · готова к сканированию";
 
-  function makeModel(name){
-    init3D(); clearModel();
-    const g = new THREE.Group();
-    const n = name.toLowerCase();
+  $("objectInfo").textContent=
+  "Нажми «Сканировать»";
 
-    if(n.includes("телефон") || n.includes("laptop") === false && n.includes("смартфон")){
-      const body = new THREE.Mesh(new THREE.BoxGeometry(1.35,.22,2.6),dark()); body.rotation.x=Math.PI/2; g.add(body);
-      const screen = new THREE.Mesh(new THREE.BoxGeometry(1.18,.035,2.25),cyan()); screen.rotation.x=Math.PI/2; screen.position.y=.13; g.add(screen);
-      const cam = new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,.04,24),mat()); cam.rotation.x=Math.PI/2; cam.position.set(.38,.16,-.92); g.add(cam);
-    } else if(n.includes("человек")){
-      const head = new THREE.Mesh(new THREE.SphereGeometry(.42,24,16),mat()); head.position.y=1.9; g.add(head);
-      const body = new THREE.Mesh(new THREE.CylinderGeometry(.55,.7,1.35,24),dark()); body.position.y=.8; g.add(body);
-      for(const x of [-.25,.25]){let leg=new THREE.Mesh(new THREE.CylinderGeometry(.18,.22,1.35,16),mat());leg.position.set(x,.0,0);g.add(leg)}
-      for(const x of [-.82,.82]){let arm=new THREE.Mesh(new THREE.CylinderGeometry(.14,.18,1.25,16),mat());arm.position.set(x,.9,0);arm.rotation.z=x<0?-0.25:0.25;g.add(arm)}
-    } else if(n.includes("бутыл")){
-      const b = new THREE.Mesh(new THREE.CylinderGeometry(.45,.52,2.1,32),mat()); b.position.y=.9; g.add(b);
-      const neck = new THREE.Mesh(new THREE.CylinderGeometry(.23,.25,.55,24),mat()); neck.position.y=2.2; g.add(neck);
-      const cap = new THREE.Mesh(new THREE.CylinderGeometry(.25,.25,.16,24),cyan()); cap.position.y=2.55; g.add(cap);
-    } else if(n.includes("стул")){
-      const seat = new THREE.Mesh(new THREE.BoxGeometry(1.6,.22,1.5),mat()); seat.position.y=1.25; g.add(seat);
-      const back = new THREE.Mesh(new THREE.BoxGeometry(1.6,1.5,.18),dark()); back.position.set(0,1.95,-.62); g.add(back);
-      for(const x of [-.62,.62]) for(const z of [-.55,.55]){
-        const leg=new THREE.Mesh(new THREE.CylinderGeometry(.11,.14,1.25,12),mat()); leg.position.set(x,.58,z); g.add(leg);
-      }
-    } else if(n.includes("ноут")){
-      const base = new THREE.Mesh(new THREE.BoxGeometry(2.5,.12,1.65),dark()); base.rotation.x=-.05; base.position.y=.1; g.add(base);
-      const screen = new THREE.Mesh(new THREE.BoxGeometry(2.5,1.55,.12),cyan()); screen.position.set(0,.88,-.75); screen.rotation.x=-.12; g.add(screen);
-    } else if(n.includes("автомоб")){
-      const base=new THREE.Mesh(new THREE.BoxGeometry(2.8,.55,1.35),mat());base.position.y=.65;g.add(base);
-      const top=new THREE.Mesh(new THREE.BoxGeometry(1.6,.55,1.15),dark());top.position.set(-.05,1.15,0);g.add(top);
-      for(const x of [-.95,.95])for(const z of [-.72,.72]){let w=new THREE.Mesh(new THREE.CylinderGeometry(.3,.3,.18,20),dark());w.rotation.z=Math.PI/2;w.position.set(x,.3,z);g.add(w)}
-    } else {
-      const a=new THREE.Mesh(new THREE.BoxGeometry(1.5,1.2,1.5),mat());a.position.y=.7;g.add(a);
-      const ring=new THREE.Mesh(new THREE.TorusGeometry(.75,.07,12,40),cyan());ring.rotation.x=Math.PI/2;ring.position.y=1.5;g.add(ring);
-    }
-    modelObject=g;
-    modelScene.add(g);
-    $("modelTitleName").textContent=name;
-    $("modelStatus").textContent="3D модель: "+name;
-    $("modelModal").style.display="flex";
-    resize3D();
-  }
+  setStatus("Камера ONLINE · BORZ готов");
 
-  function resize3D(){
-    if(!modelRenderer) return;
-    const box=$("modelBox"), w=box.clientWidth, h=box.clientHeight;
-    modelRenderer.setSize(w,h,false); modelCamera.aspect=w/h; modelCamera.updateProjectionMatrix();
-  }
-  function animate3D(){
-    animId=requestAnimationFrame(animate3D);
-    if(modelObject && rotate) modelObject.rotation.y += .008;
-    if(modelRenderer) modelRenderer.render(modelScene,modelCamera);
-  }
+  toast("Задняя камера BORZ включена");
 
-  function speak(text){
-    if(!("speechSynthesis" in window)){toast("Озвучка не поддерживается.");return}
-    speechSynthesis.cancel();
-    const u=new SpeechSynthesisUtterance(text);u.lang="ru-RU";u.rate=.95;u.pitch=1;
-    speechSynthesis.speak(u);
-  }
+  return true;
 
-  function initSpeech(){
-    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-    if(!SR){toast("Голосовой ввод не поддерживается этим браузером.");return null}
-    const r=new SR(); r.lang="ru-RU"; r.interimResults=false; r.maxAlternatives=1;
-    r.onstart=()=>{listening=true;$("voiceBtn").textContent="⏹ Слушаю";toast("Говори…")};
-    r.onend=()=>{listening=false;$("voiceBtn").textContent="🎙 Голос"};
-    r.onerror=()=>{listening=false;$("voiceBtn").textContent="🎙 Голос";toast("Не удалось распознать речь.")};
-    r.onresult=e=>{const t=e.results[0][0].transcript;$("aiInput").value=t;runCommand(t)};
-    return r;
-  }
+ }catch(e){
 
-  function runCommand(raw){
-    const t=raw.toLowerCase().trim();
-    $("assistantStatus").textContent="Выполняю: "+raw;
-    if(t.includes("камер")){startCamera();return}
-    if(t.includes("скан")){scan();return}
-    if(t.includes("3d") || t.includes("модель")){
-      const words=Object.values(objectNames);
-      const found=words.find(x=>t.includes(x.toLowerCase()));
-      if(found)setSelected(found);
-      makeModel(found||selectedObject); speak("Открываю 3D модель "+(found||selectedObject)); return;
-    }
-    if(t.includes("голос")){speak("Голосовой помощник BORZ активен.");return}
-    if(t.includes("навига") || t.includes("маршрут")){$("navModal").style.display="block";return}
-    if(t.includes("поиск") || t.includes("интернет")){
-      const q=raw.replace(/поиск|в интернете|интернет/gi,"").trim()||"BORZ AI";
-      window.open("https://www.google.com/search?q="+encodeURIComponent(q),"_blank");return
-    }
-    if(t.includes("статус")){speak("Система BORZ онлайн. Камера "+(stream?"активна":"выключена")+". Объект "+selectedObject+".");return}
-    speak("Команда не распознана. Попробуй: камера, сканировать, 3D телефона или навигация.");
-  }
+  console.error(e);
 
-  async function route(){
-    const dest=$("dest").value.trim();
-    if(!dest){toast("Введи пункт назначения.");return}
-    $("routeResult").textContent="Ищу место…";
-    try{
-      const g=await fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q="+encodeURIComponent(dest),{headers:{Accept:"application/json"}});
-      const places=await g.json();
-      if(!places.length){$("routeResult").textContent="Место не найдено.";return}
-      const p=places[0];
-      $("routeResult").innerHTML=`<b>${p.display_name}</b><br><br>Координаты: ${Number(p.lat).toFixed(5)}, ${Number(p.lon).toFixed(5)}<br><br><a target="_blank" style="color:#70e7ff" href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}">Открыть маршрут в Google Maps →</a>`;
-      $("distance").textContent="маршрут готов";
-      toast("Место найдено");
-    }catch(e){$("routeResult").textContent="Ошибка сети. Проверь интернет."; }
-  }
+  setStatus("Нет доступа к камере");
 
-  function locate(){
-    if(!navigator.geolocation){toast("Геолокация недоступна.");return}
-    navigator.geolocation.getCurrentPosition(
-      p=>{$("routeResult").innerHTML=`Твоё местоположение получено.<br>Широта: ${p.coords.latitude.toFixed(5)}<br>Долгота: ${p.coords.longitude.toFixed(5)}`;toast("Местоположение получено")},
-      ()=>toast("Разреши геолокацию для сайта."),
-      {enableHighAccuracy:true,timeout:10000}
+  toast(
+   "Камера: "+(e.name || "доступ запрещён")
+  );
+
+  return false;
+
+ }
+
+}
+
+
+/* ЗАГРУЗКА ИИ */
+
+async function loadDetector(){
+
+ if(detector) return true;
+
+ $("loading").style.display="block";
+
+ $("loadingText").textContent=
+ "Загрузка TensorFlow + COCO-SSD…";
+
+ $("loadingBar").firstElementChild.style.width="25%";
+
+
+ try{
+
+  await tf.ready();
+
+  $("loadingBar").firstElementChild.style.width="55%";
+
+  detector=
+  await cocoSsd.load({
+   base:"lite_mobilenet_v2"
+  });
+
+  $("loadingBar").firstElementChild.style.width="100%";
+
+  $("loadingText").textContent=
+  "Модель готова";
+
+  setTimeout(()=>{
+   $("loading").style.display="none";
+  },300);
+
+  return true;
+
+ }catch(e){
+
+  console.error(e);
+
+  $("loading").style.display="none";
+
+  toast(
+   "Не удалось загрузить модель распознавания"
+  );
+
+  return false;
+
+ }
+
+}
+
+
+/* РАСПОЗНАВАНИЕ */
+
+async function scanObject(){
+
+ if(!stream){
+
+  const ok=await startCamera();
+
+  if(!ok) return;
+
+ }
+
+
+ if(!detector){
+
+  const ok=await loadDetector();
+
+  if(!ok) return;
+
+ }
+
+
+ if(detecting) return;
+
+ detecting=true;
+
+ setStatus(
+  "BORZ · анализ изображения…"
+ );
+
+
+ try{
+
+  await new Promise(resolve=>{
+
+   if($("camera").readyState>=2){
+
+    resolve();
+
+   }else{
+
+    $("camera").addEventListener(
+     "loadeddata",
+     resolve,
+     {once:true}
     );
+
+   }
+
+  });
+
+
+  const predictions=
+  await detector.detect(
+   $("camera"),
+   8,
+   .45
+  );
+
+
+  if(!predictions.length){
+
+   $("targetBox").style.display="none";
+
+   $("recognition").textContent=
+   "Объект не найден";
+
+   $("objectInfo").textContent=
+   "Направь камеру на человека или предмет";
+
+   setStatus(
+    "BORZ · сканирование завершено"
+   );
+
+   toast("Объект не найден");
+
+   return;
+
   }
 
-  $("cameraBtn").onclick=startCamera;
-  $("scanBtn").onclick=scan;
-  $("modelBtn").onclick=()=>makeModel(selectedObject);
-  $("aiBtn").onclick=()=>{$("aiBox").style.display=$("aiBox").style.display==="block"?"none":"block"};
-  $("closeAI").onclick=()=>{$("aiBox").style.display="none"};
-  $("sendAI").onclick=()=>runCommand($("aiInput").value);
-  $("voiceBtn").onclick=()=>{
-    if(!recognition) recognition=initSpeech();
-    if(!recognition)return;
-    if(listening) recognition.stop(); else recognition.start();
-  };
-  $("speakAI").onclick=()=>{
-    if(!recognition) recognition=initSpeech();
-    if(recognition && !listening) recognition.start();
-  };
-  $("closeModel").onclick=()=>{$("modelModal").style.display="none"};
-  $("rotateBtn").onclick=()=>{rotate=!rotate};
-  $("navBtn").onclick=()=>{$("navModal").style.display="block"};
-  $("closeNav").onclick=()=>{$("navModal").style.display="none"};
-  $("routeBtn").onclick=route;
-  $("locateBtn").onclick=locate;
-  $("cameraPanel").onclick=e=>{
-    const r=e.target.closest(".det");
-    if(!r || !lastDetections.length)return;
-    const idx=[...$("detections").children].indexOf(r);
-    if(lastDetections[idx]) setSelected(objectNames[lastDetections[idx].class]||lastDetections[idx].class);
-  };
-  window.addEventListener("resize",resize3D);
 
-  if("getBattery" in navigator){
-    navigator.getBattery().then(b=>{
-      const update=()=>{$("battery").textContent=Math.round(b.level*100)+"%"};
-      update(); b.addEventListener("levelchange",update);
-    }).catch(()=>{$("battery").textContent="--%"});
-  }else $("battery").textContent="--%";
+  predictions.sort(
+   (a,b)=>b.score-a.score
+  );
 
-  $("assistantStatus").textContent="BORZ готов. Нажми «Камера», «Сканировать», «3D» или «AI».";
-})();
+
+  const p=predictions[0];
+
+  lastDetection=p;
+
+
+  const name=
+  RU[p.class] || p.class;
+
+
+  updateObject(
+   name,
+   p.score
+  );
+
+
+  const video=$("camera");
+
+  const [x,y,w,h]=p.bbox;
+
+  const vw=
+  video.videoWidth || 1280;
+
+  const vh=
+  video.videoHeight || 720;
+
+  const sx=
+  innerWidth/vw;
+
+  const sy=
+  innerHeight/vh;
+
+
+  const box=$("targetBox");
+
+  box.style.display="block";
+
+  box.style.left=
+  Math.max(0,x*sx)+"px";
+
+  box.style.top=
+  Math.max(0,y*sy)+"px";
+
+  box.style.width=
+  Math.max(20,w*sx)+"px";
+
+  box.style.height=
+  Math.max(20,h*sy)+"px";
+
+
+  $("targetLabel").textContent=
+  `${name.toUpperCase()} · ${Math.round(p.score*100)}%`;
+
+
+  setStatus(
+   "BORZ · объект распознан"
+  );
+
+  toast(
+   `Распознано: ${name}`
+  );
+
+
+ }catch(e){
+
+  console.error(e);
+
+  toast("Ошибка сканирования");
+
+  setStatus(
+   "Ошибка компьютерного зрения"
+  );
+
+ }finally{
+
+  detecting=false;
+
+ }
+
+}
+
+
+/* 3D */
+
+function makeMaterial(){
+
+ return new THREE.MeshStandardMaterial({
+
+  color:0x58e5ff,
+
+  metalness:.35,
+
+  roughness:.35
+
+ });
+
+}
+
+
+function make3DObject(name){
+
+ const g=new THREE.Group();
+
+ const m=makeMaterial();
+
+ const lower=name.toLowerCase();
+
+
+ if(lower.includes("человек")){
+
+  const head=
+  new THREE.Mesh(
+   new THREE.SphereGeometry(
+    .38,20,16
+   ),
+   m
+  );
+
+  head.position.y=2.35;
+
+  g.add(head);
+
+
+  const body=
+  new THREE.Mesh(
+   new THREE.CylinderGeometry(
+    .48,.58,1.35,16
+   ),
+   m
+  );
+
+  body.position.y=1.35;
+
+  g.add(body);
+
+
+  const arm1=
+  new THREE.Mesh(
+   new THREE.CylinderGeometry(
+    .12,.15,1.15,12
+   ),
+   m
+  );
+
+  arm1.rotation.z=-.18;
+
+  arm1.position.set(
+   -.68,1.38,0
+  );
+
+  g.add(arm1);
+
+
+  const arm2=arm1.clone();
+
+  arm2.rotation.z=.18;
+
+  arm2.position.x=.68;
+
+  g.add(arm2);
+
+
+  const leg1=
+  new THREE.Mesh(
+   new THREE.CylinderGeometry(
+    .14,.17,1.35,12
+   ),
+   m
+  );
+
+  leg1.position.set(
+   -.25,.2,0
+  );
+
+  g.add(leg1);
+
+
+  const leg2=leg1.clone();
+
+  leg2.position.x=.25;
+
+  g.add(leg2);
+
+ }
+
+
+ else if(lower.includes("бутыл")){
+
+  const body=
+  new THREE.Mesh(
+   new THREE.CylinderGeometry(
+    .45,.52,1.8,20
+   ),
+   m
+  );
+
+  body.position.y=.9;
+
+  g.add(body);
+
+
+  const neck=
+  new THREE.Mesh(
+   new THREE.CylinderGeometry(
+    .22,.27,.45,20
+   ),
+   m
+  );
+
+  neck.position.y=2.02;
+
+  g.add(neck);
+
+
+  const cap=
+  new THREE.Mesh(
+   new THREE.CylinderGeometry(
+    .24,.24,.16,20
+   ),
+   m
+  );
+
+  cap.position.y=2.32;
+
+  g.add(cap);
+
+ }
+
+
+ else if(lower.includes("стул")){
+
+  const seat=
+  new THREE.Mesh(
+   new THREE.BoxGeometry(
+    1.7,.18,1.7
+   ),
+   m
+  );
+
+  seat.position.y=1.25;
+
+  g.add(seat);
+
+
+  for(
+   const x of [-.65,.65]
+  )
+  for(
+   const z of [-.65,.65]
+  ){
+
+   const leg=
+   new THREE.Mesh(
+    new THREE.BoxGeometry(
+     .16,1.25,.16
+    ),
+    m
+   );
+
+   leg.position.set(
+    x,.62,z
+   );
+
+   g.add(leg);
+
+  }
+
+
+  const back=
+  new THREE.Mesh(
+   new THREE.BoxGeometry(
+    1.7,1.7,.16
+   ),
+   m
+  );
+
+  back.position.set(
+   0,2.05,-.68
+  );
+
+  g.add(back);
+
+ }
+
+
+ else if(
+ lower.includes("ноутбук") ||
+ lower.includes("компьютер") ||
+ lower.includes("пк")
+ ){
+
+  const screen=
+  new THREE.Mesh(
+   new THREE.BoxGeometry(
+    2.7,1.7,.12
+   ),
+   m
+  );
+
+  screen.position.y=1.35;
+
+  g.add(screen);
+
+
+  const base=
+  new THREE.Mesh(
+   new THREE.BoxGeometry(
+    2.9,.12,2
+   ),
+   m
+  );
+
+  base.position.y=.48;
+
+  g.add(base);
+
+ }
+
+
+ else if(
+ lower.includes("автомоб") ||
+ lower.includes("машин")
+ ){
+
+  const body=
+  new THREE.Mesh(
+   new THREE.BoxGeometry(
+    3,.75,1.45
+   ),
+   m
+  );
+
+  body.position.y=.65;
+
+  g.add(body);
+
+
+  const cabin=
+  new THREE.Mesh(
+   new THREE.BoxGeometry(
+    1.65,.72,1.25
+   ),
+   m
+  );
+
+  cabin.position.set(
+   .15,1.28,0
+  );
+
+  g.add(cabin);
+
+ }
+
+
+ else if(
+ lower.includes("телефон")
+ ){
+
+  const phone=
+  new THREE.Mesh(
+   new THREE.BoxGeometry(
+    1.15,.12,2.15
+   ),
+   m
+  );
+
+  phone.position.y=1;
+
+  g.add(phone);
+
+ }
+
+
+ else{
+
+  const box=
+  new THREE.Mesh(
+   new THREE.BoxGeometry(
+    1.8,1.8,1.8
+   ),
+   m
+  );
+
+  g.add(box);
+
+ }
+
+
+ return g;
+
+}
+
+
+let threeState=null;
+
+
+function show3D(name=currentObject){
+
+ $("threePanel").style.display="block";
+
+ $("threeTitle").textContent=
+ "BORZ · 3D · "+name.toUpperCase();
+
+ $("modelStatus").textContent=
+ "3D: "+name;
+
+ $("objectName").textContent=
+ "3D · "+name.toUpperCase();
+
+ $("objectInfo").textContent=
+ "3D-предпросмотр активирован";
+
+ initThree(name);
+
+ toast(
+  "Открыта 3D-сцена: "+name
+ );
+
+}
+
+
+function initThree(name){
+
+ const canvas=$("threeCanvas");
+
+ const scene=
+ new THREE.Scene();
+
+ scene.background=
+ new THREE.Color(0x02070b);
+
+
+ const camera=
+ new THREE.PerspectiveCamera(
+  45,1,.1,100
+ );
+
+
+ camera.position.set(
+  4,3.2,6
+ );
+
+
+ const renderer=
+ new THREE.WebGLRenderer({
+  canvas,
+  antialias:true
+ });
+
+
+ renderer.setPixelRatio(
+  Math.min(devicePixelRatio,2)
+ );
+
+
+ scene.add(
+  new THREE.AmbientLight(
+   0x8edfff,.75
+  )
+ );
+
+
+ const light=
+ new THREE.DirectionalLight(
+  0xffffff,1.5
+ );
+
+ light.position.set(4,6,5);
+
+ scene.add(light);
+
+
+ const grid=
+ new THREE.GridHelper(
+  8,16,
+  0x164b59,
+  0x0b2931
+ );
+
+ grid.position.y=-1.05;
+
+ scene.add(grid);
+
+
+ const object=
+ make3DObject(name);
+
+ object.position.y=-1;
+
+ scene.add(object);
+
+
+ function resize(){
+
+  const w=
+  canvas.clientWidth || 400;
+
+  const h=
+  canvas.clientHeight || 300;
+
+  renderer.setSize(
+   w,h,false
+  );
+
+  camera.aspect=w/h;
+
+  camera.updateProjectionMatrix();
+
+ }
+
+
+ resize();
+
+
+ let dragging=false;
+
+ let lastX=0;
+
+ let lastY=0;
+
+
+ canvas.onpointerdown=e=>{
+
+  dragging=true;
+
+  lastX=e.clientX;
+
+  lastY=e.clientY;
+
+ };
+
+
+ canvas.onpointermove=e=>{
+
+  if(!dragging) return;
+
+  object.rotation.y+=
+  (e.clientX-lastX)*.012;
+
+  object.rotation.x+=
+  (e.clientY-lastY)*.008;
+
+  lastX=e.clientX;
+
+  lastY=e.clientY;
+
+ };
+
+
+ canvas.onpointerup=
+ canvas.onpointercancel=()=>{
+  dragging=false;
+ };
+
+
+ threeState={
+  scene,
+  camera,
+  renderer,
+  object
+ };
+
+
+ function animate(){
+
+  if(
+   $("threePanel").style.display==="none"
+  ) return;
+
+  if(!dragging){
+
+   object.rotation.y+=.006;
+
+  }
+
+  renderer.render(
+   scene,
+   camera
+  );
+
+  requestAnimationFrame(
+   animate
+  );
+
+ }
+
+ animate();
+
+}
+
+
+$("close3d").onclick=()=>{
+
+ $("threePanel").style.display="none";
+
+};
+
+
+$("threeBtn").onclick=()=>{
+
+ show3D(currentObject);
+
+};
+
+
+/* AI */
+
+function openAI(){
+
+ $("aiPanel").style.display="block";
+
+ $("aiInput").focus();
+
+}
+
+
+function closeAI(){
+
+ $("aiPanel").style.display="none";
+
+}
+
+
+function runCommand(q){
+
+ const l=q.toLowerCase().trim();
+
+ if(!l)return;
+
+
+ $("aiStatus").textContent=
+ "Выполняю: "+q;
+
+
+ if(
+  l.includes("3d") ||
+  l.includes("трехмер")
+ ){
+
+  let name=currentObject;
+
+
+  if(l.includes("человек"))
+  name="человек";
+
+  else if(l.includes("бутыл"))
+  name="бутылка";
+
+  else if(l.includes("стул"))
+  name="стул";
+
+  else if(
+   l.includes("автомоб") ||
+   l.includes("машин")
+  )
+  name="автомобиль";
+
+  else if(l.includes("ноутбук"))
+  name="ноутбук";
+
+  else if(l.includes("телефон"))
+  name="телефон";
+
+  else if(
+   l.includes("пк") ||
+   l.includes("компьют")
+  )
+  name="ПК";
+
+
+  show3D(name);
+
+  speak(
+   "Открываю 3D модель "+name
+  );
+
+  return;
+
+ }
+
+
+ if(l.includes("камер")){
+
+  startCamera();
+
+  return;
+
+ }
+
+
+ if(
+  l.includes("скан") ||
+  l.includes("распозн")
+ ){
+
+  scanObject();
+
+  return;
+
+ }
+
+
+ if(
+  l.includes("навига") ||
+  l.includes("маршрут") ||
+  l.includes("куда")
+ ){
+
+  navigate();
+
+  return;
+
+ }
+
+
+ if(l.includes("поиск")){
+
+  const q2=
+  l.replace(
+   /поиск|найди|найти/g,
+   ""
+  ).trim() || currentObject;
+
+
+  window.open(
+   "https://www.google.com/search?q="+
+   encodeURIComponent(q2),
+   "_blank"
+  );
+
+  return;
+
+ }
+
+
+ toast(
+  "Команда пока не подключена"
+ );
+
+}
+
+
+$("aiBtn").onclick=openAI;
+
+$("closeAI").onclick=closeAI;
+
+$("runAI").onclick=()=>{
+
+ runCommand(
+  $("aiInput").value
+ );
+
+};
+
+
+$("aiInput").addEventListener(
+ "keydown",
+ e=>{
+
+  if(e.key==="Enter"){
+
+   runCommand(
+    $("aiInput").value
+   );
+
+  }
+
+ }
+);
+
+
+/* ГОЛОС */
+
+function voice(){
+
+ const SR=
+ window.SpeechRecognition ||
+ window.webkitSpeechRecognition;
+
+
+ if(!SR){
+
+  toast(
+   "Голосовой ввод не поддерживается"
+  );
+
+  return;
+
+ }
+
+
+ recognition=
+ new SR();
+
+
+ recognition.lang="ru-RU";
+
+ recognition.interimResults=false;
+
+ recognition.continuous=false;
+
+
+ recognition.onstart=()=>{
+
+  $("voiceBtn").classList.add("active");
+
+  setStatus(
+   "BORZ · слушаю…"
+  );
+
+  $("aiStatus").textContent=
+  "Слушаю команду…";
+
+ };
+
+
+ recognition.onresult=e=>{
+
+  const text=
+  e.results[0][0].transcript;
+
+  $("aiStatus").textContent=
+  "Вы: "+text;
+
+  runCommand(text);
+
+ };
+
+
+ recognition.onerror=e=>{
+
+  toast(
+   "Ошибка голоса: "+e.error
+  );
+
+ };
+
+
+ recognition.onend=()=>{
+
+  $("voiceBtn")
+  .classList.remove("active");
+
+  setStatus(
+   "BORZ · готов"
+  );
+
+ };
+
+
+ try{
+
+  recognition.start();
+
+ }catch(e){}
+
+}
+
+
+/* НАВИГАЦИЯ */
+
+function navigate(){
+
+ if(!navigator.geolocation){
+
+  window.open(
+   "https://www.google.com/maps",
+   "_blank"
+  );
+
+  return;
+
+ }
+
+
+ setStatus(
+  "BORZ · определяю GPS…"
+ );
+
+
+ navigator.geolocation.getCurrentPosition(
+
+  p=>{
+
+   const lat=
+   p.coords.latitude.toFixed(6);
+
+   const lon=
+   p.coords.longitude.toFixed(6);
+
+
+   $("routeText").textContent=
+   `GPS ${lat}, ${lon}`;
+
+
+   setStatus(
+    "BORZ · GPS ONLINE"
+   );
+
+
+   toast(
+    "GPS получен"
+   );
+
+
+   window.open(
+    `https://www.google.com/maps/dir/?api=1&origin=${lat},${lon}`,
+    "_blank"
+   );
+
+  },
+
+  ()=>{
+
+   toast(
+    "Разреши геолокацию для сайта"
+   );
+
+   setStatus(
+    "GPS · нет доступа"
+   );
+
+  },
+
+  {
+   enableHighAccuracy:true,
+   timeout:10000,
+   maximumAge:5000
+  }
+
+ );
+
+}
+
+
+/* КНОПКИ */
+
+$("cameraBtn").onclick=async()=>{
+
+ const ok=
+ await startCamera();
+
+ if(ok && !detector){
+
+  loadDetector();
+
+ }
+
+};
+
+
+$("scanBtn").onclick=
+scanObject;
+
+
+$("threeBtn").onclick=()=>
+show3D(currentObject);
+
+
+$("aiBtn").onclick=
+openAI;
+
+
+$("voiceBtn").onclick=
+voice;
+
+
+$("navBtn").onclick=
+navigate;
+
+
+/* ЗАПУСК */
+
+window.addEventListener(
+ "load",
+ ()=>{
+
+  setStatus(
+   "SYSTEM ONLINE · 100%"
+  );
+
+  setTimeout(
+   ()=>{
+
+    setStatus(
+     "BORZ · готов"
+    );
+
+    $("aiStatus").textContent=
+    "BORZ активирован. Я готов.";
+
+   },
+   700
+  );
+
+ }
+);
+
 </script>
+
 </body>
 </html>
